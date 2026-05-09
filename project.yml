@@ -22,6 +22,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
+        INFOPLIST_KEY_UIApplicationSupportsMultipleScenes: "NO"
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
   ResortPassTests:
     type: bundle.unit-test
     platform: iOS
