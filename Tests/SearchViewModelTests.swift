@@ -111,6 +111,41 @@ final class SearchViewModelTests: XCTestCase {
         XCTAssertEqual(vm.state.path.count, 1)
     }
 
+    // MARK: - Debounce + retry
+
+    func test_debounceConstant_isExactly500ms_perSpec() {
+        // PDF spec: "A new request should only be made 500 milliseconds after
+        // the user's last keystroke." Anchor the constant so a future change
+        // breaks this test loudly.
+        XCTAssertEqual(Networking.Constants.searchDebounce, .milliseconds(500))
+    }
+
+    func test_retryTapped_afterFailure_refetchesUsingStoredQuery() async {
+        var calls: [String] = []
+        var shouldFail = true
+        let client = SearchClient { query in
+            calls.append(query)
+            if shouldFail { throw NetworkingError.invalidResponse }
+            return Place.fixturesMatching(query)
+        }
+        let vm = makeVM(client: client)
+        vm.send(.queryChanged("newport"))
+        try? await Task.sleep(for: .milliseconds(800))
+        if case .failed = vm.state.status { } else {
+            XCTFail("Setup failed: expected initial .failed, got \(vm.state.status)")
+            return
+        }
+        // Now flip the client to succeed and retry
+        shouldFail = false
+        vm.send(.retryTapped)
+        try? await Task.sleep(for: .milliseconds(800))
+        if case .loaded = vm.state.status { } else {
+            XCTFail("Expected .loaded after retry, got \(vm.state.status)")
+        }
+        XCTAssertEqual(calls.count, 2, "Retry should fire a second client call")
+        XCTAssertEqual(calls.last, "newport", "Retry should use the stored query")
+    }
+
     // MARK: - Helpers
 
     private func makeVM(client: SearchClient) -> SearchViewModel {

@@ -1,0 +1,18 @@
+appId: com.resortpass.interview.ResortPass
+name: Search failed — retry button visible (requires -ui-test-fail-search YES launch arg)
+tags:
+  - states
+  - error
+  - search
+  - manual-launch  # see scripts/run-failure-flows.sh
+---
+# App must be pre-launched with -ui-test-fail-search YES externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass -ui-test-fail-search YES
+# Maestro drives the running instance from here.
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 5000
+- assertVisible: "Try Again"
+- takeScreenshot: 07-search-failed

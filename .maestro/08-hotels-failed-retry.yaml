@@ -1,0 +1,19 @@
+appId: com.resortpass.interview.ResortPass
+name: Hotels failed — retry button visible (requires -ui-test-fail-hotels YES launch arg)
+tags:
+  - states
+  - error
+  - hotels
+  - manual-launch
+---
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 5000
+- assertVisible: "Try Again"
+- takeScreenshot: 08-hotels-failed

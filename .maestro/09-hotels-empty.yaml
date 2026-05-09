@@ -1,0 +1,19 @@
+appId: com.resortpass.interview.ResortPass
+name: Hotels empty — distinct empty-state copy (requires -ui-test-empty-hotels YES launch arg)
+tags:
+  - states
+  - empty
+  - hotels
+  - manual-launch
+---
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "No hotels available"
+    timeout: 5000
+- assertVisible: "Back to Search"
+- takeScreenshot: 09-hotels-empty

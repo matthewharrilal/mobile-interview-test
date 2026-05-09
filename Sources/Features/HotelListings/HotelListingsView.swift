@@ -11,10 +11,10 @@ struct HotelListingsView: View {
     @State private var viewModel: HotelListingsViewModel
     @Environment(\.dismiss) private var dismiss
 
-    init(place: Place) {
+    init(place: Place, client: HotelsClient = .live()) {
         _viewModel = State(initialValue: HotelListingsViewModel(
             location: place,
-            client: .live(),
+            client: client,
             logger: .live
         ))
     }

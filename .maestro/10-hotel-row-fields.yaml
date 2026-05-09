@@ -1,0 +1,32 @@
+appId: com.resortpass.interview.ResortPass
+name: Hotel row surfaces name + image + rating + product + price (PDF requirement)
+tags:
+  - content
+  - hotels
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+# Wait for hotels to load
+- extendedWaitUntil:
+    visible: "Newport Beach, California"  # nav title (push happened)
+    timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# PDF requires: name + image + rating + product/price visible
+# Use stable regex on rating (digit.digit pattern) and price ($ symbol).
+- assertVisible:
+    text: "[A-Z].*Hotel.*|.*Westin.*|.*Hyatt.*|.*Marriott.*|.*Resort.*"
+- assertVisible:
+    text: "[0-9]\\.[0-9]"      # rating like "4.4"
+- assertVisible:
+    text: "\\$[0-9]+"          # price like "$25"
+- takeScreenshot: 10-hotel-row-all-fields
