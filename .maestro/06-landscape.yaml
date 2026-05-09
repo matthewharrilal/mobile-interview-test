@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape orientation — search + hotels render in landscape
+tags:
+  - states
+  - orientation
+---
+- launchApp:
+    clearState: true
+
+# Idle in landscape
+- setOrientation: LANDSCAPE_RIGHT
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- takeScreenshot: 06-landscape-search-idle
+
+# Search in landscape
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 06-landscape-search-loaded
+
+# Navigate to hotels in landscape
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 06-landscape-hotels-loaded
+
+# Rotate back to portrait — layout must adapt
+- setOrientation: PORTRAIT
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 06-portrait-after-rotation

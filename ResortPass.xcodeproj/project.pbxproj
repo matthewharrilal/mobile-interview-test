@@ -17,11 +17,14 @@
 		6631FE5805F9C28E0DE15E32 /* ResortPassApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C1CF6C4A4CD750AA38DB128 /* ResortPassApp.swift */; };
 		6BB058016EEE95E203F75834 /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53198B5CB0C76A572B82F22 /* Place.swift */; };
 		7F9D707421F20D3CDD5C21AE /* LogClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707DC5FFD7BF85A428FBA516 /* LogClient.swift */; };
+		80EF7552E6F6968C7F8410D7 /* PlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98992C941505E0E031B769D /* PlaceTests.swift */; };
 		9628561E7977EF7826946D80 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F7E2F4538FDB853F5D561AE0 /* Kingfisher */; };
+		9ABF29615844495F552D2DD8 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 7F7D0E5EA4FE354FFF2A5E37 /* Fixtures */; };
 		9BF07AA9E860EB1657B351DE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9CA1686C304A4BCE07185E2 /* Assets.xcassets */; };
 		A705D94AB067F552F236FB6D /* HotelListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F5190BE75C129E8C6025AD /* HotelListingsView.swift */; };
 		C25B9F10FEDD4DA11C085461 /* Search.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48070E95E38616A5DDF28799 /* Search.swift */; };
 		C6FB8C21604EAFF9AC60A8AE /* AppDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB5C6641D27F68D177FE243 /* AppDestination.swift */; };
+		CADA8323064AD86330BBF7EB /* SearchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */; };
 		D3761BB7E2DD38F3B31769ED /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741C9BB33275F71CC43C8032 /* HTTPClient.swift */; };
 		E2EE3DC787CFE84E5E6E527E /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54B689C116041413656661D /* CachedAsyncImage.swift */; };
 		E6372B4641DF613D0741E2FF /* SearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */; };
@@ -55,6 +58,7 @@
 		48070E95E38616A5DDF28799 /* Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search.swift; sourceTree = "<group>"; };
 		53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelsClient.swift; sourceTree = "<group>"; };
 		5565DB3072B904799D1A1679 /* ResortPassTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ResortPassTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModelTests.swift; sourceTree = "<group>"; };
 		6B497B1640161E8BD5E411D0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		707DC5FFD7BF85A428FBA516 /* LogClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogClient.swift; sourceTree = "<group>"; };
 		71F5190BE75C129E8C6025AD /* HotelListingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelListingsView.swift; sourceTree = "<group>"; };
@@ -62,6 +66,7 @@
 		7D08331B07035E5FDFBD93CD /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		7D124A766438DEC67835B3F0 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		7E6437EA1B13B8F2E65EB0A0 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		7F7D0E5EA4FE354FFF2A5E37 /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fixtures; path = Tests/Fixtures; sourceTree = SOURCE_ROOT; };
 		8914081E7D0E8CFC1A1188AD /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		92A5BC482DD43F0D102096EE /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		93270355FF5E6240463286A5 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -70,6 +75,7 @@
 		9D9592C6280EA55487E438BB /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		A9CA1686C304A4BCE07185E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchClient.swift; sourceTree = "<group>"; };
+		C98992C941505E0E031B769D /* PlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceTests.swift; sourceTree = "<group>"; };
 		CC5595A077652868FD3B09F8 /* Decoders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Decoders.swift; sourceTree = "<group>"; };
 		D50799C31C6BF304E0A4BF1D /* Endpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoints.swift; sourceTree = "<group>"; };
 		E53198B5CB0C76A572B82F22 /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
@@ -183,6 +189,7 @@
 		834BB0A0620AABD57110B38D = {
 			isa = PBXGroup;
 			children = (
+				7F7D0E5EA4FE354FFF2A5E37 /* Fixtures */,
 				771BF12C0A5DEC6CCF8FB360 /* Sources */,
 				A0EEC9842AE23E0DC98E93C4 /* Tests */,
 				C30CD59E69BB5CDCF21A4E0D /* Products */,
@@ -200,6 +207,8 @@
 		A0EEC9842AE23E0DC98E93C4 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				C98992C941505E0E031B769D /* PlaceTests.swift */,
+				58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -301,6 +310,7 @@
 			buildConfigurationList = 512019DF57A67655A1654EA3 /* Build configuration list for PBXNativeTarget "ResortPassTests" */;
 			buildPhases = (
 				48FDF46DCECCC970F0D31C01 /* Sources */,
+				58BFC30874047A07E5C56C24 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -357,6 +367,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		58BFC30874047A07E5C56C24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9ABF29615844495F552D2DD8 /* Fixtures in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -390,6 +408,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				80EF7552E6F6968C7F8410D7 /* PlaceTests.swift in Sources */,
+				CADA8323064AD86330BBF7EB /* SearchViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -408,6 +428,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -416,7 +437,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.resortpass.interview.ResortPassTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ResortPass.app/ResortPass";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ResortPass.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ResortPass";
 			};
 			name = Release;
 		};
@@ -520,6 +541,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -528,7 +550,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.resortpass.interview.ResortPassTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ResortPass.app/ResortPass";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ResortPass.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ResortPass";
 			};
 			name = Debug;
 		};
