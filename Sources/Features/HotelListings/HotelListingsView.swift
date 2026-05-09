@@ -1,13 +1,27 @@
 // HotelListingsView.swift
 // SwiftUI view for the HotelListings screen — list of hotel cards per Status.
+// Owns the @State HotelListingsViewModel so SwiftUI doesn't recreate it on
+// every parent re-render (which would restart the fetch indefinitely).
 
 import SwiftUI
 
 // MARK: - Body
 
 struct HotelListingsView: View {
-    @Bindable var viewModel: HotelListingsViewModel
+    @State private var viewModel: HotelListingsViewModel
     @Environment(\.dismiss) private var dismiss
+
+    init(place: Place) {
+        _viewModel = State(initialValue: HotelListingsViewModel(
+            location: place,
+            client: .live(),
+            logger: .live
+        ))
+    }
+
+    init(viewModel: HotelListingsViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     var body: some View {
         Group {

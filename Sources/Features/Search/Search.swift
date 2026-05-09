@@ -29,6 +29,9 @@ enum SearchIntent: Sendable {
     case clearTapped
     case placeSelected(Place)
     case retryTapped
+    /// Fired when NavigationStack mutates its path (e.g. swipe-back gesture).
+    /// Keeps the unidirectional invariant: state.path is the single source of truth.
+    case pathChanged([AppDestination])
 }
 
 // MARK: - ViewModel
@@ -76,10 +79,20 @@ final class SearchViewModel {
             state.status = .idle
 
         case .placeSelected(let place):
+            // Guard: places with null coordinates (e.g. "Brooklyn, Florida")
+            // would send lat=0,lng=0 to the hotels endpoint, returning garbage.
+            // Surface a clear failure rather than navigating into broken results.
+            guard place.hasUsableCoordinates else {
+                state.status = .failed(message: "We don't have coordinates for \(place.name) yet. Try a nearby city.")
+                return
+            }
             state.path.append(.hotelListings(place: place))
 
         case .retryTapped:
             startSearch(query: state.query.trimmingCharacters(in: .whitespaces))
+
+        case .pathChanged(let newPath):
+            state.path = newPath
         }
     }
 

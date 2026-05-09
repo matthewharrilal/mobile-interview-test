@@ -1,30 +1,29 @@
 // ResortPassApp.swift
-// App entry point. Composes the root view with .live client wiring.
+// App entry point. Composes the root view and the live navigation stack.
+// Production wiring uses `.live` clients pointing at staging-app.resortpass.com.
+// NavigationStack(path:) binds to the SearchViewModel's state.path so the
+// MVI unidirectional invariant holds for both pushes (placeSelected intent)
+// and pops (system swipe-back via the binding setter).
 
 import SwiftUI
 
 @main
 struct ResortPassApp: App {
     @State private var searchViewModel = SearchViewModel(client: .live(), logger: .live)
-    @State private var path: [AppDestination] = []
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack(path: $path) {
+            NavigationStack(
+                path: Binding(
+                    get: { searchViewModel.state.path },
+                    set: { searchViewModel.send(.pathChanged($0)) }
+                )
+            ) {
                 SearchView(viewModel: searchViewModel)
-                    .onAppear {
-                        // DEBUG: inject query to validate .live API decoding.
-                        // Remove before submission.
-                        searchViewModel.send(.queryChanged("newport"))
-                    }
                     .navigationDestination(for: AppDestination.self) { destination in
                         switch destination {
                         case .hotelListings(let place):
-                            HotelListingsView(viewModel: HotelListingsViewModel(
-                                location: place,
-                                client: .live(),
-                                logger: .live
-                            ))
+                            HotelListingsView(place: place)
                         }
                     }
             }

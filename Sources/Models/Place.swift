@@ -31,6 +31,13 @@ struct Place: Equatable, Sendable, Hashable, Identifiable, Codable {
         case longitude
     }
 
+    /// Whether this place can navigate to the hotels screen.
+    /// Some real-world entries (e.g. "Brooklyn, Florida") have null coordinates;
+    /// without lat/lng the algolia_hotels_v7 endpoint cannot return meaningful results.
+    var hasUsableCoordinates: Bool {
+        latitude != nil && longitude != nil
+    }
+
     /// Displayed under the place name in the search row.
     /// Examples: "Jersey City · NJ, US", "Jamaica · Country", "Newport · RI, US".
     var displayRegion: String? {
