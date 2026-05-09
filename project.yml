@@ -1,0 +1,49 @@
+name: ResortPass
+options:
+  deploymentTarget:
+    iOS: "17.0"
+  bundleIdPrefix: com.resortpass.interview
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+targets:
+  ResortPass:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+        excludes:
+          - "project.yml"
+          - "*.md"
+          - ".swiftpm"
+          - ".xcodeproj"
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+  ResortPassTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: ResortPass
+packages:
+  Kingfisher:
+    url: https://github.com/onevcat/Kingfisher
+    from: 8.0.0
+schemes:
+  ResortPass:
+    shared: true
+    gatherCoverageData: true
+    build:
+      targets:
+        ResortPass: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ResortPassTests
+      gatherCoverageData: true
