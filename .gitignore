@@ -18,3 +18,7 @@ Pods/
 
 # macOS
 .DS_Store
+
+# Maestro test artifacts (per-flow screenshots, debug output)
+[0-9][0-9]-*.png
+.maestro/screenshots/
