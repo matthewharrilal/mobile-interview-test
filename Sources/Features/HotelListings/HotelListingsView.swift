@@ -1,7 +1,5 @@
 // HotelListingsView.swift
 // SwiftUI view for the HotelListings screen — list of hotel cards per Status.
-// Owns the @State HotelListingsViewModel so SwiftUI doesn't recreate it on
-// every parent re-render (which would restart the fetch indefinitely).
 
 import SwiftUI
 
@@ -56,6 +54,7 @@ private extension HotelListingsView {
             .padding(.horizontal, Theme.Spacing.m)
             .padding(.vertical, Theme.Spacing.s)
         }
+        .accessibilityLabel(Text("Loading hotels"))
     }
 
     var skeletonCard: some View {
@@ -88,6 +87,7 @@ private extension HotelListingsView {
             .padding(.horizontal, Theme.Spacing.m)
             .padding(.vertical, Theme.Spacing.s)
         }
+        .refreshable { viewModel.send(.retryTapped) }
     }
 
     func hotelCard(_ hotel: Hotel, currency: Currency) -> some View {
@@ -96,6 +96,7 @@ private extension HotelListingsView {
                 .aspectRatio(16/10, contentMode: .fill)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.m))
+                .accessibilityHidden(true)
 
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -105,15 +106,15 @@ private extension HotelListingsView {
                         .lineLimit(2)
                     HStack(spacing: Theme.Spacing.xs) {
                         if let text = hotel.distanceText, !text.isEmpty {
-                            Label(text, systemImage: "mappin.circle.fill")
+                            Label(text, systemImage: Theme.Icon.mapPin)
                                 .labelStyle(.titleAndIcon)
                         } else if let distance = hotel.distanceMiles {
-                            Label("\(Int(distance)) mi", systemImage: "mappin.circle.fill")
+                            Label("\(Int(distance)) mi", systemImage: Theme.Icon.mapPin)
                                 .labelStyle(.titleAndIcon)
                         }
                         if let vibe = hotel.primaryVibe {
                             Text("·")
-                            Label(vibe, systemImage: "sparkles")
+                            Label(vibe, systemImage: Theme.Icon.vibe)
                                 .labelStyle(.titleAndIcon)
                         }
                     }
@@ -121,15 +122,17 @@ private extension HotelListingsView {
                     .foregroundStyle(Theme.Color.textSecondary)
                 }
                 Spacer()
-                if let rating = hotel.rating {
+                if let rating = hotel.rating, rating > 0 {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                        Label(String(format: "%.1f", rating), systemImage: Theme.Icon.star)
                             .labelStyle(.titleAndIcon)
                             .font(Theme.Typography.bodyEmphasised)
                             .foregroundStyle(Theme.Color.textPrimary)
-                        Text("(\(hotel.reviewCount))")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Color.textSecondary)
+                        if hotel.reviewCount > 0 {
+                            Text("(\(hotel.reviewCount))")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.Color.textSecondary)
+                        }
                     }
                 }
             }
@@ -158,6 +161,13 @@ private extension HotelListingsView {
             x: Theme.Elevation.card.x,
             y: Theme.Elevation.card.y
         )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Strings.Accessibility.hotelRowLabel(
+            name: hotel.name,
+            rating: hotel.rating,
+            distance: hotel.distanceText ?? hotel.distanceMiles.map { "\(Int($0)) miles" },
+            price: hotel.cheapestPrice.map { "\(currency.symbol)\(Int($0))" }
+        ))
     }
 
     func formattedPrice(_ price: Double, currency: Currency) -> String {
@@ -166,11 +176,11 @@ private extension HotelListingsView {
 
     var emptyState: some View {
         ContentUnavailableView {
-            Label("No hotels available", systemImage: "house.slash")
+            Label(Strings.Hotels.emptyHeadline, systemImage: Theme.Icon.houseSlash)
         } description: {
-            Text("We couldn't find any day passes near \(viewModel.state.location.name).")
+            Text(String(format: Strings.Hotels.emptyDescriptionFormat, viewModel.state.location.name))
         } actions: {
-            Button("Back to Search") { dismiss() }
+            Button(Strings.Hotels.backToSearch) { dismiss() }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
@@ -178,12 +188,12 @@ private extension HotelListingsView {
 
     func failedState(_ message: String) -> some View {
         ContentUnavailableView {
-            Label("Couldn't load hotels", systemImage: "exclamationmark.triangle")
+            Label(Strings.Hotels.failedHeadline, systemImage: Theme.Icon.warning)
                 .foregroundStyle(Theme.Color.danger)
         } description: {
             Text(message)
         } actions: {
-            Button("Try Again") { viewModel.send(.retryTapped) }
+            Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
@@ -191,3 +201,29 @@ private extension HotelListingsView {
 }
 
 // MARK: - Accessibility
+
+#Preview("Loading — Light") {
+    NavigationStack {
+        HotelListingsView(viewModel: HotelListingsViewModel(
+            location: Place(placeID: 1, objectID: "Newport", name: "Newport Beach, California",
+                            type: "city", cityName: "Newport Beach", stateCode: "CA", countryCode: "US",
+                            latitude: 33.6, longitude: -117.9),
+            client: HotelsClient { _ in
+                try await Task.sleep(for: .seconds(60))
+                return HotelsSearchResponse(hotels: [], currency: .usd, total: 0)
+            }
+        ))
+    }
+}
+
+#Preview("Loaded — Dark") {
+    NavigationStack {
+        HotelListingsView(viewModel: HotelListingsViewModel(
+            location: Place(placeID: 1, objectID: "Newport", name: "Newport Beach, California",
+                            type: "city", cityName: "Newport Beach", stateCode: "CA", countryCode: "US",
+                            latitude: 33.6, longitude: -117.9),
+            client: .preview
+        ))
+    }
+    .preferredColorScheme(.dark)
+}

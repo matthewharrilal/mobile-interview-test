@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SearchView: View {
     @Bindable var viewModel: SearchViewModel
+    @FocusState private var searchFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,8 +17,9 @@ struct SearchView: View {
             content
         }
         .background(Theme.Color.background)
-        .navigationTitle("Pokédex")
+        .navigationTitle(Strings.Search.navTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .scrollDismissesKeyboard(.immediately)
     }
 }
 
@@ -29,11 +31,13 @@ private extension SearchView {
             if case .loading = viewModel.state.status {
                 ProgressView()
                     .controlSize(.small)
+                    .accessibilityLabel(Text("Loading"))
             } else {
-                Image(systemName: "magnifyingglass")
+                Image(systemName: Theme.Icon.search)
                     .foregroundStyle(Theme.Color.textTertiary)
+                    .accessibilityHidden(true)
             }
-            TextField("Search cities, hotels…", text: Binding(
+            TextField(Strings.Search.placeholder, text: Binding(
                 get: { viewModel.state.query },
                 set: { viewModel.send(.queryChanged($0)) }
             ))
@@ -41,11 +45,14 @@ private extension SearchView {
             .foregroundStyle(Theme.Color.textPrimary)
             .autocorrectionDisabled()
             .textInputAutocapitalization(.never)
+            .focused($searchFocused)
+            .accessibilityLabel(Strings.Accessibility.searchField)
             if !viewModel.state.query.isEmpty {
                 Button { viewModel.send(.clearTapped) } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(systemName: Theme.Icon.clearField)
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
+                .accessibilityLabel(Strings.Accessibility.clearSearch)
             }
         }
         .padding(.horizontal, Theme.Spacing.m)
@@ -75,13 +82,14 @@ private extension SearchView {
     var idleState: some View {
         VStack(spacing: Theme.Spacing.m) {
             Spacer()
-            Image(systemName: "magnifyingglass")
+            Image(systemName: Theme.Icon.search)
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(Theme.Color.textTertiary)
-            Text("Where are you headed?")
+                .accessibilityHidden(true)
+            Text(Strings.Search.idleHeadline)
                 .font(Theme.Typography.titleM)
                 .foregroundStyle(Theme.Color.textPrimary)
-            Text("Type a city, neighborhood, or hotel\nname to discover day passes.")
+            Text(Strings.Search.idleSubtitle)
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.Color.textSecondary)
                 .multilineTextAlignment(.center)
@@ -89,6 +97,7 @@ private extension SearchView {
             Spacer()
         }
         .padding(.horizontal, Theme.Spacing.l)
+        .accessibilityElement(children: .combine)
     }
 
     var loadingState: some View {
@@ -100,6 +109,7 @@ private extension SearchView {
         }
         .padding(.horizontal, Theme.Spacing.m)
         .padding(.top, Theme.Spacing.s)
+        .accessibilityLabel(Text("Loading places"))
     }
 
     var skeletonRow: some View {
@@ -127,6 +137,7 @@ private extension SearchView {
                         placeRow(place)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint(Text(String(format: Strings.Accessibility.placeRowHintFormat, place.name)))
                 }
             }
             .padding(.horizontal, Theme.Spacing.m)
@@ -142,16 +153,17 @@ private extension SearchView {
                     .foregroundStyle(Theme.Color.textPrimary)
                     .multilineTextAlignment(.leading)
                 if let region = place.displayRegion {
-                    Label(region, systemImage: "mappin.circle.fill")
+                    Label(region, systemImage: Theme.Icon.mapPin)
                         .font(Theme.Typography.footnote)
                         .foregroundStyle(Theme.Color.textSecondary)
                         .labelStyle(.titleAndIcon)
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right")
+            Image(systemName: Theme.Icon.chevronRight)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.Color.textTertiary)
+                .accessibilityHidden(true)
         }
         .padding(Theme.Spacing.m)
         .background(Theme.Color.surface)
@@ -166,20 +178,20 @@ private extension SearchView {
 
     var emptyState: some View {
         ContentUnavailableView(
-            "No places found",
-            systemImage: "magnifyingglass",
-            description: Text("We couldn't find anywhere matching “\(viewModel.state.query)”. Try another term.")
+            Strings.Search.emptyHeadline,
+            systemImage: Theme.Icon.search,
+            description: Text(String(format: Strings.Search.emptyDescriptionFormat, viewModel.state.query))
         )
     }
 
     func failedState(_ message: String) -> some View {
         ContentUnavailableView {
-            Label("Couldn't search", systemImage: "exclamationmark.triangle")
+            Label(Strings.Search.failedHeadline, systemImage: Theme.Icon.warning)
                 .foregroundStyle(Theme.Color.danger)
         } description: {
             Text(message)
         } actions: {
-            Button("Try Again") { viewModel.send(.retryTapped) }
+            Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
@@ -188,11 +200,15 @@ private extension SearchView {
 
 // MARK: - Accessibility
 
-// Accessibility labels and traits land on the next pass once
-// the localised string keys are wired.
-
-#Preview("Idle") {
+#Preview("Idle — Light") {
     NavigationStack {
         SearchView(viewModel: SearchViewModel(client: .preview))
     }
+}
+
+#Preview("Idle — Dark") {
+    NavigationStack {
+        SearchView(viewModel: SearchViewModel(client: .preview))
+    }
+    .preferredColorScheme(.dark)
 }
