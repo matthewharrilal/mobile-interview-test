@@ -41,8 +41,71 @@ enum SearchIntent: Sendable {
 final class SearchViewModel {
     private(set) var state = SearchState(query: "", status: .idle, path: [])
 
+    private let client: SearchClient
+    private let clock: ContinuousClock
+    private let logger: LogClient
+    private var fetchTask: Task<Void, Never>?
+
+    init(
+        client: SearchClient = .preview,
+        clock: ContinuousClock = .init(),
+        logger: LogClient = .silent
+    ) {
+        self.client = client
+        self.clock = clock
+        self.logger = logger
+    }
+
     func send(_ intent: SearchIntent) {
-        // Reducer body lands in subsequent tasks (01.04.03+). Stub for compile.
-        _ = intent
+        switch intent {
+        case .queryChanged(let query):
+            state.query = query
+            let trimmed = query.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                fetchTask?.cancel()
+                fetchTask = nil
+                state.status = .idle
+                return
+            }
+            startSearch(query: trimmed)
+
+        case .clearTapped:
+            fetchTask?.cancel()
+            fetchTask = nil
+            state.query = ""
+            state.status = .idle
+
+        case .placeSelected(let place):
+            state.path.append(.hotelListings(place: place))
+
+        case .retryTapped:
+            startSearch(query: state.query.trimmingCharacters(in: .whitespaces))
+        }
+    }
+
+    private func startSearch(query: String) {
+        fetchTask?.cancel()
+        state.status = .loading
+        fetchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await self.clock.sleep(for: Networking.Constants.searchDebounce)
+                try Task.checkCancellation()
+                let places = try await self.client.search(query)
+                try Task.checkCancellation()
+                guard query == self.state.query.trimmingCharacters(in: .whitespaces) else { return }
+                if places.isEmpty {
+                    self.state.status = .empty
+                } else {
+                    self.state.status = .loaded(places)
+                }
+            } catch is CancellationError {
+                // silent: superseded by a newer query
+            } catch let urlError as URLError where urlError.code == .cancelled {
+                // silent: cancellation propagated through URLSession
+            } catch {
+                self.state.status = .failed(message: "We couldn't reach our servers. Check your connection and try again.")
+            }
+        }
     }
 }

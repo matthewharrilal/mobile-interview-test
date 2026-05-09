@@ -6,7 +6,7 @@ import SwiftUI
 // MARK: - Body
 
 struct SearchView: View {
-    @State var viewModel: SearchViewModel
+    @Bindable var viewModel: SearchViewModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,13 +26,23 @@ struct SearchView: View {
 private extension SearchView {
     var searchBar: some View {
         HStack(spacing: Theme.Spacing.s) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Theme.Color.textTertiary)
-            TextField("Search cities, hotels…", text: .constant(""))
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Color.textPrimary)
+            if case .loading = viewModel.state.status {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(Theme.Color.textTertiary)
+            }
+            TextField("Search cities, hotels…", text: Binding(
+                get: { viewModel.state.query },
+                set: { viewModel.send(.queryChanged($0)) }
+            ))
+            .font(Theme.Typography.body)
+            .foregroundStyle(Theme.Color.textPrimary)
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
             if !viewModel.state.query.isEmpty {
-                Button { /* clear */ } label: {
+                Button { viewModel.send(.clearTapped) } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
@@ -82,18 +92,41 @@ private extension SearchView {
     }
 
     var loadingState: some View {
-        VStack {
-            ProgressView()
-                .padding(.top, Theme.Spacing.xl)
+        VStack(spacing: Theme.Spacing.s) {
+            ForEach(0..<3, id: \.self) { _ in
+                skeletonRow
+            }
             Spacer()
         }
+        .padding(.horizontal, Theme.Spacing.m)
+        .padding(.top, Theme.Spacing.s)
+    }
+
+    var skeletonRow: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                .fill(Theme.Color.surfaceRecessed)
+                .frame(height: 18)
+                .frame(maxWidth: 220)
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                .fill(Theme.Color.surfaceRecessed)
+                .frame(height: 14)
+                .frame(maxWidth: 140)
+        }
+        .padding(Theme.Spacing.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
     }
 
     func loadedState(_ places: [Place]) -> some View {
         ScrollView {
             LazyVStack(spacing: Theme.Spacing.s) {
                 ForEach(places) { place in
-                    placeRow(place)
+                    Button { viewModel.send(.placeSelected(place)) } label: {
+                        placeRow(place)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, Theme.Spacing.m)
@@ -107,6 +140,7 @@ private extension SearchView {
                 Text(place.name)
                     .font(Theme.Typography.titleS)
                     .foregroundStyle(Theme.Color.textPrimary)
+                    .multilineTextAlignment(.leading)
                 if let region = place.region {
                     Label(region, systemImage: "mappin.circle.fill")
                         .font(Theme.Typography.footnote)
@@ -145,7 +179,7 @@ private extension SearchView {
         } description: {
             Text(message)
         } actions: {
-            Button("Try Again") { /* retry */ }
+            Button("Try Again") { viewModel.send(.retryTapped) }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
@@ -159,6 +193,6 @@ private extension SearchView {
 
 #Preview("Idle") {
     NavigationStack {
-        SearchView(viewModel: SearchViewModel())
+        SearchView(viewModel: SearchViewModel(client: .preview))
     }
 }
