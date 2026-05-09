@@ -1,0 +1,17 @@
+appId: com.resortpass.interview.ResortPass
+name: Search empty state — no results for nonsense query
+tags:
+  - states
+  - search
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "xyzqq"
+
+# After debounce + fetch, real API returns 0 places → .empty state
+- extendedWaitUntil:
+    visible: "No places found"
+    timeout: 5000
+- takeScreenshot: 02-search-empty

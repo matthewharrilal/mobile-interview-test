@@ -1,0 +1,22 @@
+appId: com.resortpass.interview.ResortPass
+name: Search clear button returns to idle state
+tags:
+  - states
+  - search
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+# Tap the clear (X) button — search bar is around y=15% on iPhone 17 Pro
+- tapOn:
+    point: "92%, 15%"
+
+# Should return to idle state
+- assertVisible: "Where are you headed?"
+- takeScreenshot: 03-search-cleared-to-idle

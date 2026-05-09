@@ -1,0 +1,40 @@
+appId: com.resortpass.interview.ResortPass
+name: Happy path — search → tap → see hotels → back
+tags:
+  - happy-path
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- assertVisible: "Search cities, hotels…"
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 01-search-loaded
+
+- tapOn: "Newport Beach, California"
+
+# Hotels nav title visible — push happened
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+# Wait long enough for hotels API to respond, then screenshot.
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: 01-hotels-loaded
+
+# Use coordinate-based back tap on the chevron in nav bar
+- tapOn:
+    point: "5%, 8%"
+
+# Back to search — query is preserved, results still visible
+- assertVisible: "Pokédex"
+- assertVisible: "Newport Beach, California"
+- takeScreenshot: 01-back-on-search

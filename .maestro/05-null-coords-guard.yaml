@@ -1,0 +1,24 @@
+appId: com.resortpass.interview.ResortPass
+name: Null-coord place — graceful failure (Brooklyn, FL)
+tags:
+  - states
+  - edge-cases
+  - search
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "brooklyn"
+- extendedWaitUntil:
+    visible: "Brooklyn, Florida"
+    timeout: 5000
+
+# Tap on Brooklyn, Florida (which has null lat/lng in the real API)
+- tapOn: "Brooklyn, Florida"
+
+# Should NOT navigate to hotels; should show the failed state with explanation
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 3000
+- takeScreenshot: 05-null-coords-guard-failed

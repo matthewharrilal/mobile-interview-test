@@ -1,0 +1,27 @@
+appId: com.resortpass.interview.ResortPass
+name: Rapid typing — debounce + cancellation behavior
+tags:
+  - states
+  - search
+  - concurrency
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+
+# Type rapidly without waiting between keystrokes — only the final query
+# should fire a fetch (the rest are cancelled before they hit the network).
+- inputText: "n"
+- inputText: "e"
+- inputText: "w"
+- inputText: "p"
+- inputText: "o"
+- inputText: "r"
+- inputText: "t"
+
+# After debounce settles, the loaded state appears with newport results
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 04-rapid-typing-settled
