@@ -17,6 +17,8 @@ targets:
           - "*.md"
           - ".swiftpm"
           - ".xcodeproj"
+    dependencies:
+      - package: Kingfisher
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1"
