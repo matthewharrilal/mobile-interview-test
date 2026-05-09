@@ -1,21 +1,47 @@
 // Place.swift
 // Cross-feature domain type — a searchable place returned by the autocomplete API.
-// Coordinates may be nil for some real-world entries (e.g. Brooklyn, Florida).
+// Coordinates may be nil for some entries. Note: the API's `id` (Int) is NOT
+// unique across aliases (e.g. Newport Beach and Newport Coast both have id=236);
+// `objectID` (String) is the stable unique key, so Identifiable.id maps to it.
 
 import Foundation
 
 struct Place: Equatable, Sendable, Hashable, Identifiable, Codable {
-    let id: String
+    let placeID: Int
+    let objectID: String
     let name: String
+    let type: String
+    let cityName: String
+    let stateCode: String
+    let countryCode: String
     let latitude: Double?
     let longitude: Double?
-    let region: String?
+
+    var id: String { objectID }
 
     enum CodingKeys: String, CodingKey {
-        case id = "place_id"
+        case placeID = "id"
+        case objectID
         case name
+        case type
+        case cityName = "city_name"
+        case stateCode = "state_code"
+        case countryCode = "country_code"
         case latitude
         case longitude
-        case region
+    }
+
+    /// Displayed under the place name in the search row.
+    /// Examples: "Jersey City · NJ, US", "Jamaica · Country", "Newport · RI, US".
+    var displayRegion: String? {
+        switch type {
+        case "country":
+            return countryCode.isEmpty ? "Country" : "\(countryCode) · Country"
+        default:
+            let cityPart = cityName.isEmpty ? name : cityName
+            let stateAndCountry = [stateCode, countryCode].filter { !$0.isEmpty }.joined(separator: ", ")
+            let combined = stateAndCountry.isEmpty ? cityPart : "\(cityPart) · \(stateAndCountry)"
+            return combined.isEmpty ? nil : combined
+        }
     }
 }

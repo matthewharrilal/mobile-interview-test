@@ -24,9 +24,9 @@ extension SearchClient {
             do {
                 let (data, _) = try await http.send(request)
                 try Task.checkCancellation()
-                let response = try decoder.decode(PlacesAutocompleteResponse.self, from: data)
-                logger.info("search.completed", ["count": "\(response.places.count)"])
-                return response.places
+                let places = try decoder.decode([Place].self, from: data)
+                logger.info("search.completed", ["count": "\(places.count)"])
+                return places
             } catch is CancellationError {
                 throw CancellationError()
             } catch let urlError as URLError where urlError.code == .cancelled {
@@ -56,22 +56,14 @@ extension SearchClient {
     }
 }
 
-// MARK: - Wire response
-
-private struct PlacesAutocompleteResponse: Decodable {
-    let places: [Place]
-
-    enum CodingKeys: String, CodingKey {
-        case places = "results"
-    }
-}
+// MARK: - Preview fixtures
 
 extension Place {
     static func fixturesMatching(_ query: String) -> [Place] {
         let all = [
-            Place(id: "newport-beach-ca", name: "Newport Beach, California", latitude: 33.6189, longitude: -117.9298, region: "Newport Beach · Orange County, CA"),
-            Place(id: "newport-ri", name: "Newport, Rhode Island", latitude: 41.4901, longitude: -71.3128, region: "Newport · Newport County, RI"),
-            Place(id: "newport-or", name: "Newport, Oregon", latitude: 44.6368, longitude: -124.0535, region: "Newport · Lincoln County, OR")
+            Place(placeID: 236, objectID: "Newport Beach, California", name: "Newport Beach, California", type: "city", cityName: "Newport Beach", stateCode: "CA", countryCode: "US", latitude: 33.6189, longitude: -117.9298),
+            Place(placeID: 1265, objectID: "Newport, Rhode Island", name: "Newport, Rhode Island", type: "city", cityName: "Newport", stateCode: "RI", countryCode: "US", latitude: 41.4901, longitude: -71.3128),
+            Place(placeID: 14, objectID: "Jamaica", name: "Jamaica", type: "country", cityName: "", stateCode: "", countryCode: "JM", latitude: 18.1096, longitude: -77.2975)
         ]
         guard !query.isEmpty else { return all }
         return all.filter { $0.name.localizedCaseInsensitiveContains(query) }

@@ -90,11 +90,14 @@ private extension HotelListingsView {
                         .foregroundStyle(Theme.Color.textPrimary)
                         .lineLimit(2)
                     HStack(spacing: Theme.Spacing.xs) {
-                        if let distance = hotel.distanceMiles {
+                        if let text = hotel.distanceText, !text.isEmpty {
+                            Label(text, systemImage: "mappin.circle.fill")
+                                .labelStyle(.titleAndIcon)
+                        } else if let distance = hotel.distanceMiles {
                             Label("\(Int(distance)) mi", systemImage: "mappin.circle.fill")
                                 .labelStyle(.titleAndIcon)
                         }
-                        if let vibe = hotel.vibes.first {
+                        if let vibe = hotel.primaryVibe {
                             Text("·")
                             Label(vibe, systemImage: "sparkles")
                                 .labelStyle(.titleAndIcon)
@@ -118,13 +121,17 @@ private extension HotelListingsView {
             }
 
             HStack {
-                Text(hotel.productName)
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Color.textSecondary)
+                if let productName = hotel.productName {
+                    Text(productName)
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.Color.textSecondary)
+                }
                 Spacer()
-                Text(formattedPrice(cents: hotel.priceCents, currency: currency))
-                    .font(Theme.Typography.titleS)
-                    .foregroundStyle(Theme.Color.accent)
+                if let price = hotel.cheapestPrice {
+                    Text(formattedPrice(price, currency: currency))
+                        .font(Theme.Typography.titleS)
+                        .foregroundStyle(Theme.Color.accent)
+                }
             }
             .padding(.top, Theme.Spacing.xs)
         }
@@ -139,9 +146,8 @@ private extension HotelListingsView {
         )
     }
 
-    func formattedPrice(cents: Int, currency: Currency) -> String {
-        let dollars = cents / 100
-        return "\(currency.symbol)\(dollars)"
+    func formattedPrice(_ price: Double, currency: Currency) -> String {
+        "\(currency.symbol)\(Int(price))"
     }
 
     var emptyState: some View {

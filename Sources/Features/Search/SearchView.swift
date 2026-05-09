@@ -141,7 +141,7 @@ private extension SearchView {
                     .font(Theme.Typography.titleS)
                     .foregroundStyle(Theme.Color.textPrimary)
                     .multilineTextAlignment(.leading)
-                if let region = place.region {
+                if let region = place.displayRegion {
                     Label(region, systemImage: "mappin.circle.fill")
                         .font(Theme.Typography.footnote)
                         .foregroundStyle(Theme.Color.textSecondary)

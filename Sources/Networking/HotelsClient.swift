@@ -10,6 +10,7 @@ struct HotelsClient: Sendable {
 struct HotelsSearchResponse: Sendable {
     let hotels: [Hotel]
     let currency: Currency
+    let total: Int
 }
 
 // MARK: - Live
@@ -43,8 +44,12 @@ extension HotelsClient {
                 try Task.checkCancellation()
                 let wire = try decoder.decode(HotelsWireResponse.self, from: data)
                 let response = HotelsSearchResponse(
-                    hotels: wire.hits,
-                    currency: Currency(code: wire.currency ?? "USD", symbol: "$")
+                    hotels: wire.hotels,
+                    currency: Currency(
+                        code: wire.currency?.iso_code ?? "USD",
+                        symbol: wire.currency?.symbol ?? "$"
+                    ),
+                    total: wire.total ?? wire.hotels.count
                 )
                 logger.info("hotels.completed", ["count": "\(response.hotels.count)"])
                 return response
@@ -74,7 +79,8 @@ extension HotelsClient {
     static let preview = HotelsClient { _ in
         HotelsSearchResponse(
             hotels: Hotel.previewFixtures,
-            currency: .usd
+            currency: .usd,
+            total: Hotel.previewFixtures.count
         )
     }
 }
@@ -82,44 +88,35 @@ extension HotelsClient {
 // MARK: - Wire response
 
 private struct HotelsWireResponse: Decodable {
-    let hits: [Hotel]
-    let currency: String?
+    let hotels: [Hotel]
+    let currency: CurrencyWire?
+    let total: Int?
+
+    struct CurrencyWire: Decodable {
+        let symbol: String?
+        let iso_code: String?
+    }
 }
 
 extension Hotel {
     static let previewFixtures: [Hotel] = [
         Hotel(
-            id: "twa-hotel",
-            name: "TWA Hotel",
+            id: 1, name: "TWA Hotel",
             imageURL: URL(string: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"),
-            rating: 4.1,
-            reviewCount: 164,
-            distanceMiles: 8,
-            vibes: ["Trendy"],
-            priceCents: 5000,
-            productName: "Pool Pass 9pm-10:45pm"
+            rating: 4.1, reviewCount: 164, distanceMiles: 8, distanceText: "8 mi",
+            productName: "Pool Pass 9pm-10:45pm", primaryVibe: "Trendy", cheapestPrice: 50
         ),
         Hotel(
-            id: "hyatt-jfk",
-            name: "Hyatt Regency JFK",
+            id: 2, name: "Hyatt Regency JFK",
             imageURL: URL(string: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800"),
-            rating: 4.3,
-            reviewCount: 89,
-            distanceMiles: 3,
-            vibes: ["Modern"],
-            priceCents: 7500,
-            productName: "Day Pass 10am-6pm"
+            rating: 4.3, reviewCount: 89, distanceMiles: 3, distanceText: "3 mi",
+            productName: "Day Pass 10am-6pm", primaryVibe: "Modern", cheapestPrice: 75
         ),
         Hotel(
-            id: "ritz-half-moon-bay",
-            name: "The Ritz-Carlton, Half Moon Bay",
+            id: 3, name: "The Ritz-Carlton, Half Moon Bay",
             imageURL: URL(string: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800"),
-            rating: 4.8,
-            reviewCount: 421,
-            distanceMiles: 5,
-            vibes: ["Luxury", "Coastal"],
-            priceCents: 19500,
-            productName: "Pool & Spa Day Pass"
+            rating: 4.8, reviewCount: 421, distanceMiles: 5, distanceText: "5 mi",
+            productName: "Pool & Spa Day Pass", primaryVibe: "Luxury", cheapestPrice: 195
         )
     ]
 }
