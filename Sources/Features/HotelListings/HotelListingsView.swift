@@ -119,15 +119,23 @@ private extension HotelListingsView {
 
     func sectionView(_ section: HotelListingsState.Section, currency: Currency) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(section.title)
-                    .font(Theme.Typography.editorialM)
-                    .foregroundStyle(Theme.Color.textPrimary)
-                if let subtitle = section.subtitle {
-                    Text(subtitle)
-                        .font(Theme.Typography.metadata)
-                        .foregroundStyle(Theme.Color.textTertiary)
+            // Editorial section header with hairline rule
+            HStack(alignment: .center, spacing: Theme.Spacing.m) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(section.title)
+                        .font(Theme.Typography.editorialM)
+                        .foregroundStyle(Theme.Color.textPrimary)
+                    if let subtitle = section.subtitle {
+                        Text(subtitle)
+                            .font(Theme.Typography.metadata)
+                            .foregroundStyle(Theme.Color.textTertiary)
+                    }
                 }
+                Spacer()
+                Rectangle()
+                    .fill(Theme.Color.border)
+                    .frame(height: 0.5)
+                    .frame(maxWidth: 60)
             }
             .padding(.horizontal, Theme.Spacing.m)
 
@@ -147,11 +155,19 @@ private extension HotelListingsView {
                         } preview: {
                             HotelDetailPreview(hotel: hotel, currency: currency)
                         }
+                        // iOS 17 peek-carousel: cards at edges scale + fade.
+                        .scrollTransition(.animated, axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.94)
+                                .opacity(phase.isIdentity ? 1.0 : 0.7)
+                        }
                     }
                 }
+                .scrollTargetLayout()
                 .padding(.horizontal, Theme.Spacing.m)
                 .padding(.bottom, Theme.Spacing.s)
             }
+            .scrollTargetBehavior(.viewAligned)
         }
         .padding(.top, Theme.Spacing.l)
     }

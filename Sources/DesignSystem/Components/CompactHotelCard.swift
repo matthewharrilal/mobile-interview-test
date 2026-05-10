@@ -34,29 +34,43 @@ struct CompactHotelCard: View {
                 y: 4
             )
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Eyebrow — tracked uppercase location
                 if let location = hotel.displayLocation {
                     Text(location.uppercased())
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .tracking(1.2)
+                        .tracking(1.4)
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
-                if let rating = hotel.rating, rating > 0 {
-                    HStack(spacing: 4) {
-                        StarRating(value: rating, size: 10)
-                        Text(String(format: "%.1f", rating))
-                            .font(.system(.footnote, design: .serif).weight(.medium).monospacedDigit())
-                            .foregroundStyle(Theme.Color.textPrimary)
+                // Editorial sentence — italic serif, single line in the
+                // luxury-hospitality voice
+                Text(hotel.editorialTagline)
+                    .font(.system(.subheadline, design: .serif).italic())
+                    .foregroundStyle(Theme.Color.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Tertiary price + stars — quiet, supporting role
+                HStack(alignment: .center, spacing: Theme.Spacing.s) {
+                    if let rating = hotel.rating, rating > 0 {
+                        HStack(spacing: 3) {
+                            StarRating(value: rating, size: 9)
+                            Text(String(format: "%.1f", rating))
+                                .font(.system(.caption, design: .serif).monospacedDigit())
+                                .foregroundStyle(Theme.Color.textSecondary)
+                        }
                     }
-                }
-                if let price = hotel.cheapestPrice {
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text("from")
-                            .font(.system(.caption2, design: .serif).italic())
-                            .foregroundStyle(Theme.Color.textTertiary)
-                        Text("\(currency.symbol)\(Int(price))")
-                            .font(.system(.headline, design: .serif).weight(.semibold).monospacedDigit())
-                            .foregroundStyle(Theme.Color.textPrimary)
+                    Spacer()
+                    if let price = hotel.cheapestPrice {
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("from")
+                                .font(.system(.caption2, design: .serif).italic())
+                                .foregroundStyle(Theme.Color.textTertiary)
+                            Text("\(currency.symbol)\(Int(price))")
+                                .font(.system(.subheadline, design: .serif).weight(.semibold).monospacedDigit())
+                                .foregroundStyle(Theme.Color.textPrimary)
+                        }
                     }
                 }
             }

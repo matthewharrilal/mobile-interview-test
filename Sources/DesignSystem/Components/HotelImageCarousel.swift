@@ -41,6 +41,7 @@ struct HotelImageCarousel: View {
             TabView(selection: $currentIndex) {
                 ForEach(Array(urls.prefix(5).enumerated()), id: \.offset) { index, url in
                     KFImage(url)
+                        .setProcessor(EditorialGradeProcessor())
                         .placeholder {
                             BrandedImagePlaceholder()
                         }

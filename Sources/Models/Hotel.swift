@@ -123,6 +123,32 @@ struct Hotel: Equatable, Sendable, Hashable, Identifiable, Codable {
         }
     }
 
+    /// One-line editorial tagline composed from available fields. Used in
+    /// place of the metadata strip on editorial cards. Mirrors the Mr & Mrs
+    /// Smith "single italic editorial sentence" pattern.
+    var editorialTagline: String {
+        let vibePart: String? = primaryVibe.map { $0.lowercased() }
+        let starPart: String? = hotelStar.map { stars in
+            switch stars {
+            case 5: return "five-star"
+            case 4: return "four-star"
+            case 3: return "three-star"
+            default: return nil
+            }
+        } ?? nil
+        let descriptor = [starPart, vibePart].compactMap { $0 }.first
+        switch (descriptor, cityName) {
+        case let (desc?, city?) where !city.isEmpty:
+            return "A \(desc) escape in \(city)."
+        case let (desc?, _):
+            return "A \(desc) escape."
+        case let (_, city?) where !city.isEmpty:
+            return "A day pass in \(city)."
+        default:
+            return "A day pass."
+        }
+    }
+
     private enum VibesKeys: String, CodingKey {
         case primary
         case secondary
