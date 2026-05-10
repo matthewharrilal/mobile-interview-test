@@ -290,15 +290,10 @@ private extension HotelListingsView {
             }
         }
         .coordinateSpace(name: "scroll")
-        .refreshable {
-            // Wrap the synchronous `.loading` mutation in the surface
-            // crossfade envelope so loadedState's `.transition(.opacity)`
-            // removal fires when pull-to-refresh tears the list down
-            // (cohesion-animation-system D-Gap, transaction grouping).
-            withAnimation(Theme.Animation.surfaceCrossfade) {
-                viewModel.send(.retryTapped)
-            }
-        }
+        // No pull-to-refresh: the hero's stretchy-pull effect is the only
+        // intended response to over-scroll on this screen. Re-fetching is
+        // explicit (retry button on failed/empty states); pulling down
+        // should not silently tear the list down to a skeleton.
         .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
         .ignoresSafeArea(edges: .top)         // hero bleeds behind the nav bar
     }
@@ -357,7 +352,13 @@ private extension HotelListingsView {
                 CachedAsyncImage(url: firstURL)
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: heroHeight + stretch)
-                    .offset(y: -stretch / 2 - parallax)
+                    // Full upward compensation during pull (`-stretch` rather
+                    // than `-stretch/2`) anchors the hero's TOP edge to the
+                    // nav header instead of letting the scroll's content shift
+                    // expose a white gap. Pull becomes a stretchy-header
+                    // gesture — photo grows downward, no separation from the
+                    // chrome above it.
+                    .offset(y: -stretch - parallax)
                     .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
                     .clipped()
 
