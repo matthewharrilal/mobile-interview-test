@@ -68,12 +68,14 @@ struct HotelDetailScene: View {
             closeButton
                 .opacity(contentOpacity)
         }
-        .task {
+        .onAppear {
             // Geometry settles ~150ms (spring response 0.25, damping 0.95);
-            // brief asks for 80–100ms beat before content fade-in. 160ms total
-            // gives a 10ms guard against early frames + 80ms beat + 70ms hold.
-            try? await Task.sleep(for: .milliseconds(160))
-            withAnimation(.easeOut(duration: 0.25)) {
+            // brief asks for 80–100ms beat before content fade-in. Driving
+            // the reveal off `.onAppear` with an animation `.delay` keeps
+            // the timing identical to the prior `Task.sleep(160ms)` while
+            // removing the interruption race (Phase A surgical fix —
+            // structural state-bound coordination is Phase B).
+            withAnimation(.easeOut(duration: 0.25).delay(0.16)) {
                 contentOpacity = 1
             }
         }
@@ -87,8 +89,13 @@ private extension HotelDetailScene {
     /// so SwiftUI morphs the card into the hero (and back) on presentation
     /// changes. The lift shadow during the morph reads as a "card stepping
     /// off the page" — Airbnb uses an equivalent cue at frame 4–5 of their
-    /// expansion. `isSource: true` keeps the destination's geometry as the
-    /// authoritative anchor while the source is still in the carousel.
+    /// expansion. The card (carousel) is the source; this destination omits
+    /// `isSource:` so the pair has exactly one source — avoids undefined
+    /// dual-source behavior.
+    ///
+    /// Modifier order matters: `.matchedGeometryEffect` must be applied
+    /// BEFORE `.shadow` so the shadow sits OUTSIDE the matched frame and
+    /// doesn't interpolate with it (preventing halo blooms mid-morph).
     ///
     /// Worker C wires the `DragGesture` here for the swipe-down dismiss
     /// (gesture must NOT be on the whole scene — would eat ScrollView pan).
@@ -99,8 +106,8 @@ private extension HotelDetailScene {
             hotelStar: hotel.hotelStar
         )
         .frame(height: 360)
+        .matchedGeometryEffect(id: sourceID, in: ns)
         .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
-        .matchedGeometryEffect(id: sourceID, in: ns, isSource: true)
         .offset(y: rubberBandedOffset(for: dragTranslation))
         .gesture(dismissDrag)
     }
