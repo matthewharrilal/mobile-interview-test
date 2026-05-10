@@ -10,7 +10,7 @@ enum Strings {
     // MARK: - Search screen
 
     enum Search {
-        static let navTitle = String(localized: "search.navTitle", defaultValue: "Pokédex")
+        static let navTitle = String(localized: "search.navTitle", defaultValue: "Day Passes")
         static let placeholder = String(localized: "search.placeholder", defaultValue: "Search cities, hotels…")
         static let idleHeadline = String(localized: "search.idle.headline", defaultValue: "Where are you headed?")
         static let idleSubtitle = String(localized: "search.idle.subtitle", defaultValue: "Type a city, neighborhood, or hotel\nname to discover day passes.")

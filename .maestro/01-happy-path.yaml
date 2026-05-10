@@ -6,7 +6,7 @@ tags:
 - launchApp:
     clearState: true
 
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - assertVisible: "Where are you headed?"
 - assertVisible: "Search cities, hotels…"
 
@@ -35,6 +35,6 @@ tags:
     point: "5%, 8%"
 
 # Back to search — query is preserved, results still visible
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - assertVisible: "Newport Beach, California"
 - takeScreenshot: 01-back-on-search
