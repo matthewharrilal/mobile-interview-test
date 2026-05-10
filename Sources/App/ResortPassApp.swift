@@ -15,6 +15,14 @@ import SwiftUI
 struct ResortPassApp: App {
     @State private var searchViewModel: SearchViewModel
 
+    /// Shared status-bar animator. Lives on the App so the bridge HC
+    /// reference is stable across scene-phase changes (the iOS 17 morph
+    /// path in `HotelListingsView` reaches it via
+    /// `@Environment(\.statusBarStyleAnimator)`). On iOS 18 the
+    /// `.zoom` transition coordinates the status bar natively, so call
+    /// sites gate the animator and it stays a no-op there.
+    @State private var statusBarAnimator = StatusBarStyleAnimator()
+
     init() {
         let searchClient: SearchClient = {
             #if DEBUG
@@ -32,10 +40,20 @@ struct ResortPassApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootNavigationView(
-                searchViewModel: searchViewModel,
-                hotelsClient: hotelsClientForLaunch
-            )
+            // Wrap in `StatusBarBridgedRoot` so a custom
+            // `UIHostingController` subclass owns `preferredStatusBarStyle`.
+            // Smaller diff than swapping the App entry for a
+            // `UIApplicationDelegateAdaptor` + `UIWindowSceneDelegate` —
+            // UIKit's `childForStatusBarStyle` traversal walks down to
+            // this representable's controller and honors its override.
+            StatusBarBridgedRoot(animator: statusBarAnimator) {
+                RootNavigationView(
+                    searchViewModel: searchViewModel,
+                    hotelsClient: hotelsClientForLaunch
+                )
+                .environment(\.statusBarStyleAnimator, statusBarAnimator)
+            }
+            .ignoresSafeArea()
         }
     }
 

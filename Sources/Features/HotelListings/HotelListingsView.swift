@@ -19,6 +19,16 @@ struct HotelListingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    /// Bridge to the custom `UIHostingController` owning
+    /// `preferredStatusBarStyle`. Invoked on the iOS 17 fallback morph
+    /// path (matchedGeometryEffect + ZStack overlay) so the status bar
+    /// transitions to `.lightContent` over the dark detail hero on the
+    /// same envelope as the morph spring, then back to `.darkContent`
+    /// on dismiss. iOS 18's `.zoom` transition handles status-bar
+    /// coordination natively — call sites gate on `useZoomTransitionPath`
+    /// so the animator stays a no-op there.
+    @Environment(\.statusBarStyleAnimator) private var statusBarAnimator
+
     /// iOS 17 matched-geometry namespace for the card ↔ detail morph (ZStack
     /// overlay path). Card sources use ids "card-<section>-<hotel>".
     /// Used as the fallback when iOS 18's `.matchedTransitionSource` is
@@ -123,6 +133,16 @@ struct HotelListingsView: View {
                         withAnimation(Theme.Animation.morphSpring.speed(speed)) {
                             viewModel.send(.detailDismissed)
                         }
+                        // iOS 17 dismiss: transition status bar back to
+                        // `.darkContent` over the same envelope as the
+                        // morph spring (Theme.Animation.morphSpring's
+                        // 0.25s response, scaled by `speed` so a thrown
+                        // dismiss snaps in lock-step with the spring).
+                        // The ZStack overlay path is iOS 17-only — when
+                        // the iOS 18 `.zoom` path is active, presentation
+                        // never reaches `.detailExpanded` and this
+                        // closure isn't reachable.
+                        statusBarAnimator.setStyle(.darkContent, duration: Theme.Animation.morphResponseSeconds / speed)
                     }
                 )
                 // Re-tap forces a fresh identity so an in-flight dismiss
@@ -192,6 +212,13 @@ struct HotelListingsView: View {
             withAnimation(Theme.Animation.morphSpring) {
                 viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
             }
+            // Synchronize the system status bar with the morph: the dark
+            // detail hero materializes over the duration of the spring's
+            // response window, so flip to `.lightContent` on the same
+            // envelope. iOS 18's `.zoom` path coordinates this natively
+            // — the gate above ensures we only run the bridge when the
+            // overlay morph is actually playing.
+            statusBarAnimator.setStyle(.lightContent, duration: Theme.Animation.morphResponseSeconds)
         }
     }
 }

@@ -139,6 +139,14 @@ enum Theme {
         /// lands clean before the content fade-in beat starts in the detail.
         static let morphSpring = SwiftUI.Animation.spring(response: 0.25, dampingFraction: 0.95)
 
+        /// Bare seconds matching `morphSpring`'s response — used by call
+        /// sites that need to bind a non-SwiftUI duration (e.g. UIKit
+        /// `UIView.animate(withDuration:)` inside the status-bar bridge)
+        /// to the same envelope. Keep these two in lock-step so the
+        /// status-bar crossfade lands with the geometry instead of
+        /// running on UIKit's default 0.3s ease.
+        static let morphResponseSeconds: TimeInterval = 0.25
+
         /// Content reveal inside the detail surface — fade-in coordinated
         /// with the morph landing (`.delay(0.16)` is applied at the call
         /// site so the beat lands ~160ms after mount). Linear-ease tail
