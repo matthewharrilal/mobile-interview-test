@@ -86,7 +86,7 @@ final class SearchViewModelTests: XCTestCase {
 
     // MARK: - Place selection guard
 
-    func test_placeSelected_withNullCoords_transitionsToFailedNotNavigation() {
+    func test_placeSelected_withNullCoords_transitionsToFailedNullCoordsNotNavigation() {
         let vm = makeVM(client: .preview)
         let nullCoordPlace = Place(
             placeID: 999, objectID: "Brooklyn, Florida", name: "Brooklyn, Florida",
@@ -94,10 +94,44 @@ final class SearchViewModelTests: XCTestCase {
             latitude: nil, longitude: nil
         )
         vm.send(.placeSelected(nullCoordPlace))
-        if case .failed = vm.state.status { } else {
-            XCTFail("Place with null coords must surface .failed instead of pushing into broken hotels")
+        if case .failedNullCoords(let name) = vm.state.status {
+            XCTAssertEqual(name, "Brooklyn, Florida", "Status should carry the offending place's name")
+        } else {
+            XCTFail("Place with null coords must surface .failedNullCoords, got \(vm.state.status)")
         }
         XCTAssertTrue(vm.state.path.isEmpty, "Path must NOT be appended for unusable coords")
+    }
+
+    // MARK: - Null-coords recovery
+
+    func test_clearSearch_fromFailedNullCoords_returnsToIdleAndClearsQuery() async {
+        let vm = makeVM(client: .preview)
+        // Drive to the null-coords failed state via a query then a place pick.
+        vm.send(.queryChanged("brooklyn"))
+        try? await Task.sleep(for: .milliseconds(800))
+        let nullCoordPlace = Place(
+            placeID: 999, objectID: "Brooklyn, Florida", name: "Brooklyn, Florida",
+            type: "city", cityName: "Brooklyn", stateCode: "FL", countryCode: "US",
+            latitude: nil, longitude: nil
+        )
+        vm.send(.placeSelected(nullCoordPlace))
+        guard case .failedNullCoords = vm.state.status else {
+            XCTFail("Setup failed: expected .failedNullCoords, got \(vm.state.status)")
+            return
+        }
+        let baselineClearCount = vm.state.clearCount
+
+        // The CTA in this state fires .clearSearch — should clear query, go idle.
+        vm.send(.clearSearch)
+
+        XCTAssertEqual(vm.state.query, "", "clearSearch must empty the query")
+        if case .idle = vm.state.status { } else {
+            XCTFail("clearSearch must transition to .idle, got \(vm.state.status)")
+        }
+        XCTAssertEqual(
+            vm.state.clearCount, baselineClearCount,
+            "clearSearch must NOT increment clearCount — that haptic is reserved for the input-field X tap"
+        )
     }
 
     func test_placeSelected_withValidCoords_pushesDestination() {

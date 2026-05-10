@@ -78,6 +78,8 @@ private extension SearchView {
             emptyState
         case .failed(let message):
             failedState(message)
+        case .failedNullCoords(let placeName):
+            failedNullCoordsState(placeName)
         }
     }
 
@@ -214,6 +216,26 @@ private extension SearchView {
             Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
+        }
+        .transition(.opacity)
+    }
+
+    /// Distinct from `failedState`: the user picked a place we can't navigate to
+    /// (null coords). "Try Again" against the same query is a dead-end, so the
+    /// CTA clears the query, returns to idle, and refocuses the input field.
+    func failedNullCoordsState(_ placeName: String) -> some View {
+        ContentUnavailableView {
+            Label(Strings.Search.nullCoordsHeadline, systemImage: Theme.Icon.warning)
+                .foregroundStyle(Theme.Color.danger)
+        } description: {
+            Text(String(format: Strings.Search.nullCoordsFormat, placeName))
+        } actions: {
+            Button(Strings.Search.nullCoordsCTA) {
+                viewModel.send(.clearSearch)
+                searchFocused = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Theme.Color.accent)
         }
         .transition(.opacity)
     }

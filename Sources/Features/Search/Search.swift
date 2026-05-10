@@ -21,7 +21,12 @@ struct SearchState: Equatable, Sendable {
         case loading
         case loaded([Place])
         case empty
+        /// Genuine search-fetch failure (network / decode / etc). Retry is meaningful.
         case failed(message: String)
+        /// Selected place lacks usable coordinates. Retry is NOT meaningful — the
+        /// only path forward is for the user to clear and search a different city.
+        /// Surfaced separately so the View can render the correct CTA.
+        case failedNullCoords(placeName: String)
     }
 }
 
@@ -32,6 +37,10 @@ enum SearchIntent: Sendable {
     case clearTapped
     case placeSelected(Place)
     case retryTapped
+    /// Resets query to empty and status to idle without firing the haptic-feedback
+    /// counter. Used by the null-coords failed-state CTA where the user is not
+    /// tapping the input-field clear button but wants the same end state.
+    case clearSearch
     /// Fired when NavigationStack mutates its path (e.g. swipe-back gesture).
     /// Keeps the unidirectional invariant: state.path is the single source of truth.
     case pathChanged([AppDestination])
@@ -86,14 +95,25 @@ final class SearchViewModel {
             // Guard: places with null coordinates (e.g. "Brooklyn, Florida")
             // would send lat=0,lng=0 to the hotels endpoint, returning garbage.
             // Surface a clear failure rather than navigating into broken results.
+            // Use the dedicated `.failedNullCoords` case so the View renders a
+            // "search a nearby city" CTA instead of the generic "Try Again" — the
+            // latter just re-fires the same query and traps the user in a dead-end.
             guard place.hasUsableCoordinates else {
-                state.status = .failed(message: "We don't have coordinates for \(place.name) yet. Try a nearby city.")
+                state.status = .failedNullCoords(placeName: place.name)
                 return
             }
             state.path.append(.hotelListings(place: place))
 
         case .retryTapped:
             startSearch(query: state.query.trimmingCharacters(in: .whitespaces))
+
+        case .clearSearch:
+            // Reset to a fresh idle state without bumping `clearCount` — that
+            // counter is reserved for the input-field X tap haptic.
+            fetchTask?.cancel()
+            fetchTask = nil
+            state.query = ""
+            state.status = .idle
 
         case .pathChanged(let newPath):
             state.path = newPath

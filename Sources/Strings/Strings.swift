@@ -23,6 +23,8 @@ enum Strings {
         static let failedDecode = String(localized: "search.failed.decode", defaultValue: "We received an unexpected response. Please try again.")
         static let failedUnknown = String(localized: "search.failed.unknown", defaultValue: "Something went wrong. Check your connection and try again.")
         static let nullCoordsFormat = String(localized: "search.failed.nullCoords", defaultValue: "We don't have coordinates for %@ yet. Try a nearby city.")
+        static let nullCoordsHeadline = String(localized: "search.failed.nullCoords.headline", defaultValue: "Coordinates unavailable")
+        static let nullCoordsCTA = String(localized: "search.failed.nullCoords.cta", defaultValue: "Search a nearby city")
         static let tryAgain = String(localized: "common.tryAgain", defaultValue: "Try Again")
     }
 

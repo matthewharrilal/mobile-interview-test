@@ -1,5 +1,5 @@
 appId: com.resortpass.interview.ResortPass
-name: Landscape — Null-coords guard (S6) shows "Couldn't search" in landscape
+name: Landscape — Null-coords guard (S6) shows "Coordinates unavailable" in landscape
 tags:
   - orientation
   - landscape
@@ -22,8 +22,10 @@ tags:
 # Tap on Brooklyn, Florida (which has null lat/lng in the real API)
 - tapOn: "Brooklyn, Florida"
 
-# Should NOT navigate to hotels; should show the failed state
+# Should NOT navigate to hotels; should show the null-coords state with the
+# dedicated CTA ("Search a nearby city") in place of the dead-end "Try Again".
 - extendedWaitUntil:
-    visible: "Couldn't search"
+    visible: "Coordinates unavailable"
     timeout: 3000
+- assertVisible: "Search a nearby city"
 - takeScreenshot: 49-landscape-null-coords

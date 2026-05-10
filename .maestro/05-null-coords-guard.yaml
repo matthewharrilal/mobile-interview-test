@@ -17,8 +17,10 @@ tags:
 # Tap on Brooklyn, Florida (which has null lat/lng in the real API)
 - tapOn: "Brooklyn, Florida"
 
-# Should NOT navigate to hotels; should show the failed state with explanation
+# Should NOT navigate to hotels; should show the null-coords state with a
+# semantically-correct CTA ("Search a nearby city"), not the dead-end "Try Again".
 - extendedWaitUntil:
-    visible: "Couldn't search"
+    visible: "Coordinates unavailable"
     timeout: 3000
+- assertVisible: "Search a nearby city"
 - takeScreenshot: 05-null-coords-guard-failed
