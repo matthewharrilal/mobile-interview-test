@@ -6,6 +6,10 @@ tags:
   - listings
   - regression
   - p2
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
 ---
 # P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
 # REQUIRES SCRIPT — must be pre-launched with
@@ -29,7 +33,8 @@ tags:
     timeout: 4000
 - takeScreenshot: 71-rm-card-tap-0
 
-# Tap the card; capture mid-spring (~100ms) and tail (~250ms).
+# Tap the card; capture mid-spring (~100ms) and tail (~250ms). Unavoidable
+# coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - takeScreenshot: 71-rm-card-tap-100

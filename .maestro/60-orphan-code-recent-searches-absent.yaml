@@ -4,6 +4,10 @@ tags:
   - orphan-code
   - dead-code
   - search
+# device: iPhone 17 Pro
+# Contains one unavoidable coord-tap (5%, 8%) on the system nav-bar back
+# chevron — SwiftUI's default back button has no settable
+# accessibilityIdentifier.
 ---
 # P0 — proves RecentSearchesStore.swift:8 is dead code per 01-codebase-map.md:1014.
 # After visiting a place and returning to Search, no "Recent" / "Recents" header
@@ -29,7 +33,9 @@ tags:
 - waitForAnimationToEnd:
     timeout: 8000
 
-# Back to Search via nav-bar chevron coord-tap.
+# Back to Search via nav-bar chevron coord-tap. Unavoidable: SwiftUI's
+# default back button has no settable accessibilityIdentifier — see header
+# `# device:` marker.
 - tapOn:
     point: "5%, 8%"
 - waitForAnimationToEnd:

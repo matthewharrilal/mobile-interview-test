@@ -4,6 +4,10 @@ tags:
   - transitions
   - visual-audit
   - gap
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
 ---
 # GAP-DOCUMENTING: Per audit 03:114 and 01:1044 — committed dismiss should
 # follow a 1:1 drag past 200pt. Current implementation appears to fire the
@@ -27,7 +31,7 @@ tags:
 - waitForAnimationToEnd:
     timeout: 4000
 
-# Enter detail
+# Enter detail. Unavoidable coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:

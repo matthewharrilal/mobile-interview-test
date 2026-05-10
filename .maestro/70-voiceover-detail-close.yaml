@@ -5,6 +5,10 @@ tags:
   - voiceover
   - detail
   - p2
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
 ---
 # P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
 # REQUIRES SCRIPT — must be pre-launched with -UIAccessibilityVoiceOverEnabled YES.
@@ -27,7 +31,8 @@ tags:
 - waitForAnimationToEnd:
     timeout: 4000
 
-# Open detail via card tap (coords mirror flow 11 step 10).
+# Open detail via card tap (coords mirror flow 11 step 10). Unavoidable
+# coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:

@@ -3,6 +3,10 @@ name: Detail content fade-in — easeOut(0.25) ramp
 tags:
   - transitions
   - visual-audit
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
 ---
 # Visual-only: contentOpacity 0→1 per HotelDetailScene.swift:60 (sleep ends
 # at 160ms, easeOut(0.25) fade completes ~410ms). Close button (chevron.down)
@@ -25,7 +29,7 @@ tags:
 - waitForAnimationToEnd:
     timeout: 4000
 
-# Tap card → detail
+# Tap card → detail. Unavoidable coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 

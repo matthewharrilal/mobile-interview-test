@@ -4,6 +4,11 @@ tags:
   - regression
   - coordinate-fragility
   - listings
+# device: iPhone 17 Pro
+# Intentional coord-tap regression — this flow asserts that 5%, 8% lands on
+# the nav-bar back chevron under iPhone 17 Pro / iOS 26.4 calibration. It is
+# expected to fail on other form factors (iPad, smaller iPhones); that is
+# the whole point. Do not "fix" by replacing with a semantic selector.
 ---
 # P1 — verifies the coord-tap calibration to iPhone 17 Pro / iOS 26.4
 # (per scripts/run-failure-flows.sh:9). If this flow fails, every existing

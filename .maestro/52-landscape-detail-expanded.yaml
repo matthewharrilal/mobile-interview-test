@@ -5,6 +5,11 @@ tags:
   - landscape
   - hotels
   - detail
+# device: iPhone 17 Pro (landscape)
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
+#
 # Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 52
 #
 # Note (per 01:1061): the 360pt parallax-header height is fixed and does NOT
@@ -29,7 +34,8 @@ tags:
 - waitForAnimationToEnd:
     timeout: 4000
 
-# Tap a card → matched-geom expansion to HotelDetailScene
+# Tap a card → matched-geom expansion to HotelDetailScene. Unavoidable
+# coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:

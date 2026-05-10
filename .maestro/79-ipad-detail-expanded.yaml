@@ -5,8 +5,13 @@ tags:
   - ipad
   - detail
   - orientation
----
 # device: iPad Pro 13-inch
+# Coord-tap (30%, 45%) is calibrated for iPhone 17 Pro and is KNOWN to miss
+# on iPad — see comment at the tap step. CompactHotelCard exposes no
+# per-card accessibilityIdentifier; once one is added (follow-up: e.g.
+# "hotel-card-\(hotel.id)") this flow can use a semantic selector and pass
+# on iPad as well.
+---
 # P1 — runner must boot the iPad Pro 13-inch simulator before invoking.
 #   xcrun simctl boot "iPad Pro 13-inch (M4)"
 # Captures HotelDetailScene fullscreen behavior on iPad landscape; the 360pt

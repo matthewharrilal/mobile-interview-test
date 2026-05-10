@@ -3,6 +3,11 @@ name: Transitions audit — card-tap morph + sheet dismiss multi-frame
 tags:
   - transitions
   - visual-audit
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on the second card in the
+# Top picks carousel. CompactHotelCard has an accessibilityLabel built from
+# hotel name but no per-card accessibilityIdentifier. Follow-up: add
+# accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
 ---
 # GAP-DOCUMENTING: Maestro 0.15 cannot reliably hit exact +0/+75/+150/+250ms
 # offsets — `wait` (sleep) granularity drifts. Frames are best-effort and
@@ -28,7 +33,8 @@ tags:
 
 - assertVisible: "Top picks"
 
-# Tap card and capture multi-frame morph immediately.
+# Tap card and capture multi-frame morph immediately. Unavoidable coord-tap
+# — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - takeScreenshot: 13-morph-t0

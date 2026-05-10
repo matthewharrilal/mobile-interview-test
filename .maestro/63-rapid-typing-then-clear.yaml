@@ -6,7 +6,7 @@ tags:
   - concurrency
 ---
 # P0 — types four characters within the 500ms debounce window, then taps the
-# clear glyph (coord 92%, 15% per 02-existing-flow-inventory.md:73 calibration).
+# clear glyph by accessibility label "Clear search" (SearchView.swift:56).
 # Expectation: the debounced fetch never resolves; UI returns to the idle
 # headline "Where are you headed?" (Search.swift:75-79).
 # Source spec: 04-combo-matrix.md §5.10 flow 63.
@@ -21,9 +21,8 @@ tags:
 - inputText: "w"
 - inputText: "p"
 
-# Tap the clear glyph at the far right of the search field.
-- tapOn:
-    point: "92%, 15%"
+# Tap the clear glyph by accessibility label — device-agnostic.
+- tapOn: "Clear search"
 - waitForAnimationToEnd:
     timeout: 1000
 

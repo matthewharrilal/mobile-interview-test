@@ -5,6 +5,11 @@ tags:
   - dark
   - hotels
   - detail
+# device: iPhone 17 Pro
+# Contains an unavoidable coord-tap (30%, 45%) on a Top picks card.
+# CompactHotelCard exposes no per-card accessibilityIdentifier. Follow-up:
+# add accessibilityIdentifier "hotel-card-\(hotel.id)" on CompactHotelCard.
+#
 # Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 40
 #
 # DARK-MODE ORCHESTRATION (per matrix §7.2):
@@ -27,7 +32,8 @@ tags:
 - waitForAnimationToEnd:
     timeout: 4000
 
-# Tap a card → matched-geom expansion to HotelDetailScene
+# Tap a card → matched-geom expansion to HotelDetailScene. Unavoidable
+# coord-tap — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:

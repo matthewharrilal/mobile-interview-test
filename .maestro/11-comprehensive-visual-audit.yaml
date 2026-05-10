@@ -2,6 +2,13 @@ appId: com.resortpass.interview.ResortPass
 name: Comprehensive visual audit — scroll, tap, filter, card→detail morph, scrollTransition
 tags:
   - visual-audit
+# device: iPhone 17 Pro
+# Contains two unavoidable coord-taps:
+#   - 30%, 45% — taps the second card in the Top picks carousel; the
+#     CompactHotelCard exposes an accessibilityLabel built from the hotel
+#     name but no per-card accessibilityIdentifier. Follow-up: add an
+#     identifier like "hotel-card-\(hotel.id)" on CompactHotelCard.
+#   - 5%, 8% — system nav-bar back chevron (no settable accessibilityIdentifier).
 ---
 # 1. Fresh launch — Search idle
 - launchApp:
@@ -66,7 +73,9 @@ tags:
     timeout: 1500
 - takeScreenshot: audit-08-deeper-scroll
 
-# 10. Tap a card → matched-geometry card→detail morph (transition shell, no .sheet)
+# 10. Tap a card → matched-geometry card→detail morph (transition shell, no .sheet).
+# Unavoidable coord-tap: cards expose an accessibilityLabel but no unique
+# accessibilityIdentifier — see header `# device:` marker.
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:
@@ -94,7 +103,8 @@ tags:
     timeout: 1500
 - takeScreenshot: audit-11-back-to-list
 
-# 13. Back to search via nav bar tap
+# 13. Back to search via nav-bar tap. Unavoidable coord-tap: SwiftUI's
+# default back chevron has no settable accessibilityIdentifier.
 - tapOn:
     point: "5%, 8%"
 - waitForAnimationToEnd:

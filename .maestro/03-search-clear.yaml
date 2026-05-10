@@ -13,9 +13,10 @@ tags:
     visible: "Newport Beach, California"
     timeout: 5000
 
-# Tap the clear (X) button — search bar is around y=15% on iPhone 17 Pro
-- tapOn:
-    point: "92%, 15%"
+# Tap the clear (X) button by accessibility label — device-agnostic.
+# Matches `accessibilityLabel(Strings.Accessibility.clearSearch)` on the
+# clear button in SearchView.swift:56.
+- tapOn: "Clear search"
 
 # Should return to idle state
 - assertVisible: "Where are you headed?"

@@ -2,6 +2,11 @@ appId: com.resortpass.interview.ResortPass
 name: Happy path — search → tap → see hotels → back
 tags:
   - happy-path
+# device: iPhone 17 Pro
+# Contains one unavoidable coord-tap (5%, 8%) on the system nav-bar back
+# chevron — the SwiftUI default back button has no custom accessibilityIdentifier
+# we can target. Follow-up: add a custom toolbar back button with an
+# accessibilityIdentifier (e.g. "back-button") so this can be replaced.
 ---
 - launchApp:
     clearState: true
@@ -30,7 +35,9 @@ tags:
     timeout: 8000
 - takeScreenshot: 01-hotels-loaded
 
-# Use coordinate-based back tap on the chevron in nav bar
+# Coord-tap on the system nav-bar back chevron. Unavoidable: SwiftUI's
+# default back button has no settable accessibilityIdentifier. Calibrated
+# against iPhone 17 Pro — see header `# device:` marker.
 - tapOn:
     point: "5%, 8%"
 
