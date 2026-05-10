@@ -253,6 +253,74 @@ final class SpecComplianceTests: XCTestCase {
         }
     }
 
+    // MARK: - HotelListings: presentation-layer transitions
+
+    func test_hotelListings_cardTapped_transitionsToDetailExpanded() async {
+        // The most user-visible state mutation on this screen — pinning
+        // that cardTapped lands in .detailExpanded carrying both the
+        // tapped hotel and its zoom-source identifier verbatim, without
+        // resetting other state.
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(location: location, client: .preview, logger: .silent)
+        vm.send(.appeared)
+        try? await Task.sleep(for: .milliseconds(300))
+        guard case .loaded = vm.state.status else { XCTFail("Setup: expected .loaded"); return }
+
+        let hotel = Hotel.previewFixtures[0]
+        let sourceID = "card-section-1-hotel-\(hotel.id)"
+        vm.send(.cardTapped(hotel: hotel, sourceID: sourceID))
+
+        if case .detailExpanded(let received, let receivedSourceID) = vm.state.presentation {
+            XCTAssertEqual(received.id, hotel.id, "Tapped hotel must reach the detail payload verbatim")
+            XCTAssertEqual(receivedSourceID, sourceID, "Source ID must reach the detail payload verbatim (matched-geometry id)")
+        } else {
+            XCTFail("Expected .detailExpanded, got \(vm.state.presentation)")
+        }
+
+        // Status untouched — cardTapped is a presentation mutation, not a fetch.
+        if case .loaded = vm.state.status { } else {
+            XCTFail("cardTapped must NOT mutate .status, got \(vm.state.status)")
+        }
+    }
+
+    func test_hotelListings_detailDismissed_returnsToBrowsingAndZeroesDragProgress() async {
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(location: location, client: .preview, logger: .silent)
+        vm.send(.appeared)
+        try? await Task.sleep(for: .milliseconds(300))
+
+        let hotel = Hotel.previewFixtures[0]
+        vm.send(.cardTapped(hotel: hotel, sourceID: "src"))
+        // Simulate user mid-drag: dismissProgress at 0.4
+        vm.send(.dragProgressChanged(progress: 0.4))
+        XCTAssertEqual(vm.state.dismissProgress, 0.4, accuracy: 0.0001, "Setup: drag progress should be applied")
+
+        vm.send(.detailDismissed)
+
+        if case .browsing = vm.state.presentation { } else {
+            XCTFail("detailDismissed must return to .browsing, got \(vm.state.presentation)")
+        }
+        XCTAssertEqual(vm.state.dismissProgress, 0, accuracy: 0.0001,
+                       "detailDismissed must zero dismissProgress (otherwise the next morph starts mid-animation)")
+    }
+
+    func test_hotelListings_dragProgressChanged_writesProgressMonotonically() async {
+        // dismissProgress is read on every frame of the drag-throw animation.
+        // The reducer must apply each .dragProgressChanged write verbatim
+        // without rounding, clamping, or filtering — that's the host's job.
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(location: location, client: .preview, logger: .silent)
+        vm.send(.appeared)
+        try? await Task.sleep(for: .milliseconds(300))
+
+        let progressSequence: [CGFloat] = [0.0, 0.15, 0.32, 0.58, 0.74, 0.91, 1.0]
+        for progress in progressSequence {
+            vm.send(.dragProgressChanged(progress: progress))
+            XCTAssertEqual(vm.state.dismissProgress, progress, accuracy: 0.0001,
+                           "Progress \(progress) must be applied verbatim")
+        }
+    }
+
     // MARK: - HotelListings: scene-phase staleness policy
 
     func test_hotelListings_sceneDidBecomeActive_underThreshold_doesNotRefetch() async {
