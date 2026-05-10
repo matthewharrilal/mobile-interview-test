@@ -24,7 +24,10 @@ extension SearchClient {
             do {
                 let (data, _) = try await http.send(request)
                 try Task.checkCancellation()
-                let places = try decoder.decode([Place].self, from: data)
+                // Lossy decode: a single malformed `Place` row in the
+                // staging response shouldn't drop the whole list. The
+                // user pays for one bad row by losing 1 of 10, not 10.
+                let places = try decoder.decodeLossy([Place].self, from: data)
                 logger.info("search.completed", ["count": "\(places.count)"])
                 return places
             } catch is CancellationError {

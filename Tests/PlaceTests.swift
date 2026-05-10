@@ -45,6 +45,67 @@ final class PlaceTests: XCTestCase {
         XCTAssertNotEqual(beach?.id, coast?.id, "Identifiable.id (objectID) must distinguish them")
     }
 
+    // MARK: - Defensive decoding (FailableDecodable)
+
+    func test_decodeLossy_dropsMalformedRows_preservesGoodRows() throws {
+        // Mixed array: one valid Place, one row missing required `objectID`,
+        // one row with `id` as a String. Lossy decode should drop the bad
+        // two and return only the valid Place.
+        let json = """
+        [
+          { "id": 1, "objectID": "valid", "name": "Valid Place", "type": "city",
+            "city_name": "Valid", "state_code": "CA", "country_code": "US",
+            "latitude": 33.0, "longitude": -117.0 },
+          { "id": 2, "name": "Missing ObjectID", "type": "city",
+            "city_name": "X", "state_code": "CA", "country_code": "US",
+            "latitude": 33.0, "longitude": -117.0 },
+          { "id": "three-as-string", "objectID": "type-mismatch", "name": "Bad ID Type",
+            "type": "city", "city_name": "X", "state_code": "CA", "country_code": "US",
+            "latitude": 33.0, "longitude": -117.0 }
+        ]
+        """.data(using: .utf8)!
+
+        let places = try Decoders.api.decodeLossy([Place].self, from: json)
+        XCTAssertEqual(places.count, 1, "Only the valid row should survive lossy decode")
+        XCTAssertEqual(places.first?.objectID, "valid")
+    }
+
+    func test_decodeLossy_emptyArray_returnsEmpty() throws {
+        let json = "[]".data(using: .utf8)!
+        let places = try Decoders.api.decodeLossy([Place].self, from: json)
+        XCTAssertTrue(places.isEmpty)
+    }
+
+    func test_decodeLossy_allRowsValid_returnsAll() throws {
+        let json = """
+        [
+          { "id": 1, "objectID": "a", "name": "A", "type": "city",
+            "city_name": "A", "state_code": "CA", "country_code": "US",
+            "latitude": 0, "longitude": 0 },
+          { "id": 2, "objectID": "b", "name": "B", "type": "city",
+            "city_name": "B", "state_code": "CA", "country_code": "US",
+            "latitude": 0, "longitude": 0 }
+        ]
+        """.data(using: .utf8)!
+        let places = try Decoders.api.decodeLossy([Place].self, from: json)
+        XCTAssertEqual(places.count, 2)
+    }
+
+    func test_decodeLossy_allRowsMalformed_returnsEmpty() throws {
+        // Per the contract: lossy decode of an all-malformed array returns
+        // empty (not throws). The VM will then surface this as `.empty` —
+        // which is the correct user-facing message ("no results for your
+        // query") given the data shape is irrecoverable.
+        let json = """
+        [
+          { "garbage": true },
+          { "id": "string", "objectID": "x" }
+        ]
+        """.data(using: .utf8)!
+        let places = try Decoders.api.decodeLossy([Place].self, from: json)
+        XCTAssertTrue(places.isEmpty, "All malformed → empty array (not throw)")
+    }
+
     // MARK: - Display
 
     func test_displayRegion_city_combinesCityStateCountry() {

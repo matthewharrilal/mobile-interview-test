@@ -112,6 +112,21 @@ private struct HotelsWireResponse: Decodable {
         let symbol: String?
         let iso_code: String?
     }
+
+    /// Custom decode so a single malformed hotel row doesn't drop the
+    /// whole listings response. Wraps each element in
+    /// `FailableDecodable<Hotel>` and `compactMap`s survivors.
+    enum CodingKeys: String, CodingKey {
+        case hotels, currency, total
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let wrapped = try container.decodeIfPresent([FailableDecodable<Hotel>].self, forKey: .hotels) ?? []
+        self.hotels = wrapped.compactMap(\.value)
+        self.currency = try container.decodeIfPresent(CurrencyWire.self, forKey: .currency)
+        self.total = try container.decodeIfPresent(Int.self, forKey: .total)
+    }
 }
 
 extension Hotel {
