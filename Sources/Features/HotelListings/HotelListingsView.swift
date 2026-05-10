@@ -263,7 +263,15 @@ private extension HotelListingsView {
             }
         }
         .coordinateSpace(name: "scroll")
-        .refreshable { viewModel.send(.retryTapped) }
+        .refreshable {
+            // Wrap the synchronous `.loading` mutation in the surface
+            // crossfade envelope so loadedState's `.transition(.opacity)`
+            // removal fires when pull-to-refresh tears the list down
+            // (cohesion-animation-system D-Gap, transaction grouping).
+            withAnimation(Theme.Animation.surfaceCrossfade) {
+                viewModel.send(.retryTapped)
+            }
+        }
         .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
         .ignoresSafeArea(edges: .top)         // hero bleeds behind the nav bar
     }
@@ -520,7 +528,14 @@ private extension HotelListingsView {
         } description: {
             Text(message)
         } actions: {
-            Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
+            Button(Strings.Search.tryAgain) {
+                // Same envelope as failedState's `.transition(.opacity)`
+                // so the failed view fades out instead of snapping when
+                // the user retries (cohesion-animation-system D-Gap).
+                withAnimation(Theme.Animation.surfaceCrossfade) {
+                    viewModel.send(.retryTapped)
+                }
+            }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
