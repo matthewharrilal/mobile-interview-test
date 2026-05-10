@@ -17,12 +17,19 @@ import SwiftUI
 struct HotelListingsView: View {
     @State private var viewModel: HotelListingsViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Single matched-geometry namespace for the card ↔ detail morph.
     /// Card sources use ids "card-<section>-<hotel>".
     @Namespace private var ns
 
     @State private var selectedFilter: HotelListingsState.Filter = .all
+
+    /// Hero parallax height. Scales with Dynamic Type so the editorial
+    /// headline + summary line continue to fit cleanly above the bottom
+    /// scrim at xxLarge and beyond. Anchored at 360 pt at default size
+    /// to preserve the existing visual rhythm.
+    @ScaledMetric(relativeTo: .title) private var heroHeight: CGFloat = 360
 
     init(place: Place, client: HotelsClient = .live()) {
         _viewModel = State(initialValue: HotelListingsViewModel(
@@ -202,7 +209,7 @@ private extension HotelListingsView {
             ZStack(alignment: .bottomLeading) {
                 CachedAsyncImage(url: firstURL)
                     .scaledToFill()
-                    .frame(width: proxy.size.width, height: 360 + stretch)
+                    .frame(width: proxy.size.width, height: heroHeight + stretch)
                     .offset(y: -stretch / 2 - parallax)
                     .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
                     .clipped()
@@ -210,17 +217,24 @@ private extension HotelListingsView {
                 // Top edge softener — fades from the page background into
                 // the photo so the top line never reads as a hard cut against
                 // the chrome (especially when overscrolling exposes the area
-                // above the image).
-                LinearGradient(
-                    stops: [
-                        .init(color: Theme.Color.background.opacity(0.85), location: 0.0),
-                        .init(color: Theme.Color.background.opacity(0.30), location: 0.06),
-                        .init(color: .clear,                                 location: 0.18)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .allowsHitTesting(false)
+                // above the image). Light mode only: in dark mode the page
+                // background resolves to near-black and the gradient becomes
+                // a visible darkening band against bright photographic
+                // content (see F-T-03), so we skip the softener entirely —
+                // modern iOS does not show a hard cut at the safe-area
+                // boundary.
+                if colorScheme == .light {
+                    LinearGradient(
+                        stops: [
+                            .init(color: Theme.Color.background.opacity(0.85), location: 0.0),
+                            .init(color: Theme.Color.background.opacity(0.30), location: 0.06),
+                            .init(color: .clear,                                 location: 0.18)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .allowsHitTesting(false)
+                }
 
                 // Tonal vignette — preserves headline legibility against the photo.
                 LinearGradient(
@@ -256,10 +270,10 @@ private extension HotelListingsView {
                 .padding(Theme.Spacing.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(width: proxy.size.width, height: 360)   // taller than before to absorb safe-area extension
+            .frame(width: proxy.size.width, height: heroHeight)   // taller than before to absorb safe-area extension
             .clipped()
         }
-        .frame(height: 360)
+        .frame(height: heroHeight)
     }
 
     func headerSummary(loaded: HotelListingsState.Loaded) -> String {
