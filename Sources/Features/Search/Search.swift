@@ -12,6 +12,9 @@ struct SearchState: Equatable, Sendable {
     var query: String
     var status: Status
     var path: [AppDestination]
+    /// Increments only on user-initiated clear (`.clearTapped`). The View observes
+    /// this for haptic feedback so backspacing the last character does not mistrigger.
+    var clearCount: Int = 0
 
     enum Status: Equatable, Sendable {
         case idle
@@ -77,6 +80,7 @@ final class SearchViewModel {
             fetchTask = nil
             state.query = ""
             state.status = .idle
+            state.clearCount &+= 1
 
         case .placeSelected(let place):
             // Guard: places with null coordinates (e.g. "Brooklyn, Florida")

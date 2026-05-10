@@ -54,9 +54,9 @@ private extension SearchView {
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
                 .accessibilityLabel(Strings.Accessibility.clearSearch)
-                .sensoryFeedback(.selection, trigger: viewModel.state.query.isEmpty)
             }
         }
+        .sensoryFeedback(.selection, trigger: viewModel.state.clearCount)
         .padding(.horizontal, Theme.Spacing.m)
         .padding(.vertical, Theme.Spacing.s + 2)
         .background(Theme.Color.surfaceRecessed)
