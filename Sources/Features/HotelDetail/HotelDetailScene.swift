@@ -492,7 +492,7 @@ private extension HotelDetailScene {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
             if let location = hotel.displayLocation {
                 Text(location.uppercased())
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
                     .tracking(1.3)
                     .foregroundStyle(Theme.Color.textTertiary)
                     // Sweep iOS17 #1 — first staggered element (eyebrow).
@@ -587,7 +587,7 @@ private extension HotelDetailScene {
         // pushed mode relies on the navigation back chevron.
         Button(action: { onDismiss?(0) }) {
             Image(systemName: "chevron.down")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.Color.textPrimary)
                 .padding(Theme.Spacing.s + 2)
                 .background(.ultraThinMaterial, in: Circle())

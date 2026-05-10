@@ -195,13 +195,15 @@ private extension SearchView {
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
                 Text(place.typeBadge.uppercased())
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    // Semantic .caption2 so the tracked type badge scales
+                    // with Dynamic Type at accessibility sizes.
+                    .font(.system(.caption2, design: .rounded).weight(.medium))
                     .tracking(0.8)
                     .foregroundStyle(Theme.Color.textTertiary)
             }
             Spacer(minLength: Theme.Spacing.s)
             Image(systemName: Theme.Icon.chevronRight)
-                .font(.system(size: 11, weight: .medium))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(Theme.Color.textTertiary.opacity(0.6))
                 .accessibilityHidden(true)
         }

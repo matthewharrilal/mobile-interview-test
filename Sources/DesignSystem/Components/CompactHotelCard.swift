@@ -45,7 +45,10 @@ struct CompactHotelCard: View {
                 // Eyebrow — tracked uppercase location
                 if let location = hotel.displayLocation {
                     Text(location.uppercased())
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        // Semantic .caption2 (11pt baseline) so eyebrows
+                        // scale with Dynamic Type at xxxLarge/AX sizes
+                        // instead of staying frozen at 10pt.
+                        .font(.system(.caption2, design: .rounded).weight(.semibold))
                         .tracking(1.4)
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
@@ -67,7 +70,7 @@ struct CompactHotelCard: View {
                 // row lacks a product name.
                 if let productName = hotel.productName, !productName.isEmpty {
                     Text(productName)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(Theme.Color.textTertiary)
                         .lineLimit(1, reservesSpace: true)
                         .truncationMode(.tail)

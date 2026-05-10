@@ -100,7 +100,10 @@ struct HotelImageCarousel: View {
 
     private var pagingIndicator: some View {
         Text("\(currentIndex + 1) / \(min(urls.count, 5))")
-            .font(.system(size: 11, weight: .medium, design: .rounded).monospacedDigit())
+            // Semantic .caption2 so the paging text scales at large
+            // Dynamic Type sizes; .monospacedDigit() preserves the
+            // single-digit width while the surrounding size scales.
+            .font(.system(.caption2, design: .rounded).weight(.medium).monospacedDigit())
             .foregroundStyle(.white)
             .padding(.horizontal, Theme.Spacing.s)
             .padding(.vertical, 4)

@@ -48,7 +48,9 @@ private struct FilterChip: View {
                 Image(systemName: filter.iconName)
                     .font(.system(size: 12, weight: .medium))
                 Text(filter.displayName)
-                    .font(.system(size: 13, weight: .medium))
+                    // Semantic .footnote so chip labels scale with
+                    // Dynamic Type at large accessibility sizes.
+                    .font(.footnote.weight(.medium))
             }
             .foregroundStyle(isSelected ? Color.white : Theme.Color.textPrimary)
             .padding(.horizontal, Theme.Spacing.m)
