@@ -624,14 +624,22 @@ private struct StaggerArrival: ViewModifier {
     let staggerDelay: Double
 
     func body(content: Content) -> some View {
+        // Direct value-bound animation rather than `.phaseAnimator(...)`.
+        // PhaseAnimator stores its phase index as inline view-tree state
+        // that NavigationStack's `.zoom` transition resets when the
+        // destination view is re-instantiated post-morph — but the
+        // @State `trigger` is preserved as `true`, so PhaseAnimator
+        // sees no value change and never re-advances. Result: content
+        // arrives, then visibly fades back to phase 0 (opacity 0) when
+        // the phase index resets but the trigger stays true.
+        // Binding opacity/offset directly to the trigger value
+        // sidesteps that desync: trigger=true → visible, trigger=false
+        // → hidden, animated via the `.animation(_:value:)` modifier
+        // bound to the trigger itself.
         content
-            .phaseAnimator([0.0, 1.0], trigger: trigger) { view, phase in
-                view
-                    .opacity(phase)
-                    .offset(y: (1.0 - phase) * 12)
-            } animation: { _ in
-                Theme.Animation.contentArrival.delay(staggerDelay)
-            }
+            .opacity(trigger ? 1.0 : 0.0)
+            .offset(y: trigger ? 0 : 12)
+            .animation(Theme.Animation.contentArrival.delay(staggerDelay), value: trigger)
     }
 }
 
