@@ -82,13 +82,33 @@ enum Theme {
 
     // MARK: - Elevation
 
+    /// Layered shadow system. Real elevation comes from stacking a tight
+    /// ambient shadow (close, soft) on top of a wider cast shadow (offset,
+    /// diffuse). Single-shadow cards always look flat under direct light.
     enum Elevation {
-        static let card = (
+        /// Subtle ambient shadow — adds the close-up "lift" off the surface.
+        static let cardAmbient = (
             color: SwiftUI.Color.black.opacity(0.06),
             radius: CGFloat(3),
             x: CGFloat(0),
             y: CGFloat(1)
         )
+        /// Wider cast shadow — adds the cinematic depth at distance.
+        static let cardCast = (
+            color: SwiftUI.Color.black.opacity(0.10),
+            radius: CGFloat(18),
+            x: CGFloat(0),
+            y: CGFloat(8)
+        )
+        /// Floating chip elevation — for price pills overlapping the card edge.
+        static let floatingChip = (
+            color: SwiftUI.Color.black.opacity(0.16),
+            radius: CGFloat(10),
+            x: CGFloat(0),
+            y: CGFloat(4)
+        )
+        /// Legacy — kept so older call-sites compile.
+        static let card = cardAmbient
     }
 
     // MARK: - Icons
