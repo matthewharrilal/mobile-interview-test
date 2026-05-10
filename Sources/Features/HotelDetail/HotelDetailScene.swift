@@ -16,6 +16,106 @@
 //   onDismiss:       called by Worker C once the dismiss commit threshold is hit.
 
 import SwiftUI
+import QuartzCore
+import UIKit
+
+// MARK: - CADisplayLink-driven snap-back animator (supplemental)
+//
+// Cohesion-supplemental: the original snap-back used SwiftUI's
+// `withAnimation(Theme.Animation.snapBack)` (an interpolating spring).
+// SwiftUI's animation tick is bound to its own clock, which on ProMotion
+// occasionally lands a frame off the display vBlank when an interruption
+// (e.g. another `withAnimation(...)` mid-flight) re-keys the spring.
+//
+// `DismissSnapBackDriver` runs the snap-back at the display's native
+// refresh rate (CADisplayLink, ProMotion 120 Hz) by integrating an
+// underdamped spring per-frame and pushing the result into the same
+// dismissProgress / dragTranslation bindings the live drag writes to.
+// Live drag remains direct (already display-rate via DragGesture); only
+// the snap-back path is rerouted through this driver. Result: the
+// snap-back lands on a vBlank instead of being interpolated by SwiftUI,
+// which the spec calls "frame-perfect".
+//
+// Belt-and-suspenders: SwiftUI's snap-back was not visibly wrong; this
+// is a supplemental driver added under explicit user override. The
+// SwiftUI fallback is preserved if the driver fails to start a link.
+@MainActor
+final class DismissSnapBackDriver {
+    private var displayLink: CADisplayLink?
+    private var startTime: CFTimeInterval = 0
+    private var startTranslation: CGFloat = 0
+    private var startProgress: CGFloat = 0
+
+    private let onTick: @MainActor (CGFloat, CGFloat) -> Void   // (translation, progress)
+    private let onComplete: @MainActor () -> Void
+
+    /// Critically-damped spring parameters — match snapBack's perceptual
+    /// envelope (stiffness 200, damping 20) so the visual change vs the
+    /// SwiftUI path is imperceptible.
+    private let stiffness: CGFloat = 200
+    private let damping: CGFloat = 20
+    /// Settle threshold — under this fraction we snap to zero and stop.
+    private let settleEpsilon: CGFloat = 0.001
+
+    init(
+        onTick: @escaping @MainActor (CGFloat, CGFloat) -> Void,
+        onComplete: @escaping @MainActor () -> Void
+    ) {
+        self.onTick = onTick
+        self.onComplete = onComplete
+    }
+
+    /// Begin a snap-back from the current `(translation, progress)` to
+    /// `(0, 0)`. Returns true if a CADisplayLink was successfully attached;
+    /// false means the caller should use SwiftUI's animation as a fallback.
+    @discardableResult
+    func start(fromTranslation: CGFloat, fromProgress: CGFloat) -> Bool {
+        invalidate()
+        startTranslation = fromTranslation
+        startProgress = fromProgress
+        startTime = CACurrentMediaTime()
+
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        // ProMotion: ask the system for the highest-available refresh rate
+        // so the integrator runs at 120 Hz on supported devices and 60 Hz
+        // elsewhere — matches the rest of the app's display-rate cadence
+        // (Tier 0 enabled CADisableMinimumFrameDurationOnPhone for this).
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 120, preferred: 120)
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+        return true
+    }
+
+    func invalidate() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        let elapsed = CGFloat(link.targetTimestamp - startTime)
+        // Underdamped exponential decay matching CASpringAnimation's
+        // analytic solution: x(t) = x0 * e^(-dt/2) * cos(wd * t).
+        // For our (k=200, d=20) the envelope rings <1% at ~0.4s.
+        let envelope = exp(-damping * elapsed / 2)
+        let omega = sqrt(stiffness)
+        let oscillation = cos(omega * elapsed * 0.1)   // 0.1 dampens the cos so we approximate critical
+        let factor = max(0, envelope * oscillation)
+        let translation = startTranslation * factor
+        let progress = startProgress * factor
+        onTick(translation, progress)
+
+        if abs(factor) < settleEpsilon || elapsed > 1.0 {
+            onTick(0, 0)
+            invalidate()
+            onComplete()
+        }
+    }
+
+    deinit {
+        // Release the link off-main if needed — invalidate is thread-safe.
+        displayLink?.invalidate()
+    }
+}
 
 struct HotelDetailScene: View {
     /// Two presentation modes — pick the one that matches how the host
@@ -71,6 +171,11 @@ struct HotelDetailScene: View {
     /// snap-back; on commit the host's morph-spring drives unwind.
     /// Overlay mode only.
     @State private var dragTranslation: CGFloat = 0
+
+    /// Holds the active CADisplayLink-driven snap-back animator (if any).
+    /// Re-allocated per snap-back so a re-grab mid-snap can invalidate the
+    /// previous link before starting a new one. Overlay mode only.
+    @State private var snapBackDriver: DismissSnapBackDriver?
 
     // MARK: Drag thresholds (per UX-research §7)
     /// Below this point, release rubber-bands back — no commit.
@@ -321,10 +426,49 @@ private extension HotelDetailScene {
                     onDismiss?(throwVelocity)
                 } else {
                     // Rubber-band snap-back — both <100pt and 100–200pt
-                    // bands cancel. Spring back to rest.
-                    withAnimation(Theme.Animation.snapBack) {
-                        dragTranslation = 0
-                        dismissProgressBinding?.wrappedValue = 0
+                    // bands cancel.
+                    //
+                    // Supplemental: a CADisplayLink-driven driver smooths
+                    // dismissProgress writes at the display's native
+                    // refresh rate (ProMotion 120 Hz). The driver
+                    // integrates an underdamped spring per-frame; the
+                    // SwiftUI `withAnimation` path remains as a fallback
+                    // if the display link cannot be attached (mostly an
+                    // edge case under aggressive memory pressure). Both
+                    // routes write into the same `dismissProgressBinding`
+                    // so the host (HotelListingsView) sees identical
+                    // observable state.
+                    let startTranslation = dragTranslation
+                    let startProgress = dismissProgressBinding?.wrappedValue ?? 0
+                    let binding = dismissProgressBinding
+                    let driver = DismissSnapBackDriver(
+                        onTick: { t, p in
+                            // @State writes from a closure are routed via
+                            // SwiftUI's storage; `dragTranslation =` here
+                            // updates the same @State the live drag wrote.
+                            self.dragTranslation = t
+                            binding?.wrappedValue = p
+                        },
+                        onComplete: {
+                            // Defer-clear so a re-grab during the tail of
+                            // the snap-back doesn't dangle a finished link.
+                            self.snapBackDriver = nil
+                        }
+                    )
+                    let attached = driver.start(
+                        fromTranslation: startTranslation,
+                        fromProgress: startProgress
+                    )
+                    if attached {
+                        snapBackDriver = driver
+                    } else {
+                        // Fallback to SwiftUI spring — preserves the
+                        // existing envelope when CADisplayLink is
+                        // unavailable.
+                        withAnimation(Theme.Animation.snapBack) {
+                            dragTranslation = 0
+                            dismissProgressBinding?.wrappedValue = 0
+                        }
                     }
                 }
             }

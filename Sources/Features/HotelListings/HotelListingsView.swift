@@ -579,6 +579,13 @@ private extension HotelListingsView {
             }
             .padding(.horizontal, Theme.Spacing.m)
         }
+        // Cohesion-supplemental: a Metal stitchable shader
+        // (`skeletonShimmer` in EditorialShaders.metal) runs a soft
+        // horizontal sine sweep over the skeleton blocks via SwiftUI's
+        // `.layerEffect(...)`. The loading skeleton is non-matched-
+        // geometry and is unmounted before any card → detail morph runs,
+        // so the layer effect cannot disturb the transition.
+        .skeletonShimmer()
     }
 
     var emptyState: some View {

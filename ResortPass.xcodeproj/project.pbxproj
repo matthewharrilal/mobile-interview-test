@@ -28,6 +28,7 @@
 		9628561E7977EF7826946D80 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F7E2F4538FDB853F5D561AE0 /* Kingfisher */; };
 		9ABF29615844495F552D2DD8 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 7F7D0E5EA4FE354FFF2A5E37 /* Fixtures */; };
 		9B15B3E87B10A91798F3E553 /* EditorialGradeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FD839D8D41B30AFBE3E715 /* EditorialGradeProcessor.swift */; };
+		9B15B3E87B10A91798F3E563 /* EditorialShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 50FD839D8D41B30AFBE3E725 /* EditorialShaders.metal */; };
 		9BF07AA9E860EB1657B351DE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9CA1686C304A4BCE07185E2 /* Assets.xcassets */; };
 		A21BB3F56AE22430ABBC95F3 /* StarRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81992BA483821453807E654 /* StarRating.swift */; };
 		A705D94AB067F552F236FB6D /* HotelListingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F5190BE75C129E8C6025AD /* HotelListingsView.swift */; };
@@ -74,6 +75,7 @@
 		4245B1ED045EACE41B95FC16 /* HotelDetailScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelDetailScene.swift; sourceTree = "<group>"; };
 		48070E95E38616A5DDF28799 /* Search.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Search.swift; sourceTree = "<group>"; };
 		50FD839D8D41B30AFBE3E715 /* EditorialGradeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorialGradeProcessor.swift; sourceTree = "<group>"; };
+		50FD839D8D41B30AFBE3E725 /* EditorialShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = EditorialShaders.metal; sourceTree = "<group>"; };
 		53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelsClient.swift; sourceTree = "<group>"; };
 		5565DB3072B904799D1A1679 /* ResortPassTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ResortPassTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModelTests.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				92A5BC482DD43F0D102096EE /* .gitkeep */,
 				F54B689C116041413656661D /* CachedAsyncImage.swift */,
 				50FD839D8D41B30AFBE3E715 /* EditorialGradeProcessor.swift */,
+				50FD839D8D41B30AFBE3E725 /* EditorialShaders.metal */,
 			);
 			path = ImageCaching;
 			sourceTree = "<group>";
@@ -455,6 +458,7 @@
 				08A9019E91BDC0151C3E2DF6 /* Currency.swift in Sources */,
 				2215EBE716E6E30B02E89512 /* Decoders.swift in Sources */,
 				9B15B3E87B10A91798F3E553 /* EditorialGradeProcessor.swift in Sources */,
+				9B15B3E87B10A91798F3E563 /* EditorialShaders.metal in Sources */,
 				12191DDD98574CDF9BF7A252 /* Endpoints.swift in Sources */,
 				ERRRK000000000000000B001 /* ErrorKind.swift in Sources */,
 				E21E4F72E79CE8F6D80987C4 /* FilterChipRow.swift in Sources */,
