@@ -39,6 +39,7 @@
 		E21E4F72E79CE8F6D80987C4 /* FilterChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2D8917A8C845AD1F71772E /* FilterChipRow.swift */; };
 		E2EE3DC787CFE84E5E6E527E /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54B689C116041413656661D /* CachedAsyncImage.swift */; };
 		E6372B4641DF613D0741E2FF /* SearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */; };
+		ERRRK000000000000000B001 /* ErrorKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = ERRRK000000000000000F001 /* ErrorKind.swift */; };
 		E730B4B2E9F7EEFA06D1965B /* HotelsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */; };
 		E7EE4F30F28F1F1D32B76F88 /* Strings.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA1219A9ADE242E6567CE1F /* Strings.swift */; };
 		EA267ABA5A86A6668EDB4907 /* PlayfairDisplay.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CC540AC3F61187B332D49FF8 /* PlayfairDisplay.ttf */; };
@@ -97,6 +98,7 @@
 		A3391CD3FA306CA26AAB350B /* StretchyHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StretchyHero.swift; sourceTree = "<group>"; };
 		A9CA1686C304A4BCE07185E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchClient.swift; sourceTree = "<group>"; };
+		ERRRK000000000000000F001 /* ErrorKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorKind.swift; sourceTree = "<group>"; };
 		C832A7566877F7F8903BB6B3 /* PlayfairDisplay-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlayfairDisplay-Italic.ttf"; sourceTree = "<group>"; };
 		C98992C941505E0E031B769D /* PlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceTests.swift; sourceTree = "<group>"; };
 		CC540AC3F61187B332D49FF8 /* PlayfairDisplay.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = PlayfairDisplay.ttf; sourceTree = "<group>"; };
@@ -313,6 +315,7 @@
 				9D9592C6280EA55487E438BB /* Constants.swift */,
 				CC5595A077652868FD3B09F8 /* Decoders.swift */,
 				D50799C31C6BF304E0A4BF1D /* Endpoints.swift */,
+				ERRRK000000000000000F001 /* ErrorKind.swift */,
 				53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */,
 				741C9BB33275F71CC43C8032 /* HTTPClient.swift */,
 				AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */,
@@ -453,6 +456,7 @@
 				2215EBE716E6E30B02E89512 /* Decoders.swift in Sources */,
 				9B15B3E87B10A91798F3E553 /* EditorialGradeProcessor.swift in Sources */,
 				12191DDD98574CDF9BF7A252 /* Endpoints.swift in Sources */,
+				ERRRK000000000000000B001 /* ErrorKind.swift in Sources */,
 				E21E4F72E79CE8F6D80987C4 /* FilterChipRow.swift in Sources */,
 				D3761BB7E2DD38F3B31769ED /* HTTPClient.swift in Sources */,
 				59FC9F4E052336AEAA049105 /* Hotel.swift in Sources */,

@@ -100,6 +100,16 @@ final class SearchViewModel {
         }
     }
 
+    private static func message(for kind: ErrorKind) -> String {
+        switch kind {
+        case .notConnected: return Strings.Search.failedNetwork
+        case .timeout:      return Strings.Search.failedTimeout
+        case .serverError:  return Strings.Search.failedServer
+        case .decodeError:  return Strings.Search.failedDecode
+        case .unknown:      return Strings.Search.failedUnknown
+        }
+    }
+
     private func startSearch(query: String) {
         fetchTask?.cancel()
         state.status = .loading
@@ -121,7 +131,7 @@ final class SearchViewModel {
             } catch let urlError as URLError where urlError.code == .cancelled {
                 // silent: cancellation propagated through URLSession
             } catch {
-                self.state.status = .failed(message: "We couldn't reach our servers. Check your connection and try again.")
+                self.state.status = .failed(message: Self.message(for: ErrorKind.from(error)))
             }
         }
     }

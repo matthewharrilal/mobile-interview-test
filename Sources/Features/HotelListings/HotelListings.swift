@@ -201,8 +201,18 @@ final class HotelListingsViewModel {
             } catch let urlError as URLError where urlError.code == .cancelled {
                 // silent
             } catch {
-                self.state.status = .failed(message: "We couldn't reach our servers. Check your connection and try again.")
+                self.state.status = .failed(message: Self.message(for: ErrorKind.from(error)))
             }
+        }
+    }
+
+    private static func message(for kind: ErrorKind) -> String {
+        switch kind {
+        case .notConnected: return Strings.Hotels.failedNetwork
+        case .timeout:      return Strings.Hotels.failedTimeout
+        case .serverError:  return Strings.Hotels.failedServer
+        case .decodeError:  return Strings.Hotels.failedDecode
+        case .unknown:      return Strings.Hotels.failedUnknown
         }
     }
 }

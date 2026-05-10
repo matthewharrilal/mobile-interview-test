@@ -17,7 +17,11 @@ enum Strings {
         static let emptyHeadline = String(localized: "search.empty.headline", defaultValue: "No places found")
         static let emptyDescriptionFormat = String(localized: "search.empty.description", defaultValue: "We couldn't find anywhere matching \u{201C}%@\u{201D}. Try another term.")
         static let failedHeadline = String(localized: "search.failed.headline", defaultValue: "Couldn't search")
-        static let failedNetwork = String(localized: "search.failed.network", defaultValue: "We couldn't reach our servers. Check your connection and try again.")
+        static let failedNetwork = String(localized: "search.failed.network", defaultValue: "You appear to be offline. Reconnect and try again.")
+        static let failedTimeout = String(localized: "search.failed.timeout", defaultValue: "The search took too long. Try again in a moment.")
+        static let failedServer = String(localized: "search.failed.server", defaultValue: "Our servers are having trouble. Please try again shortly.")
+        static let failedDecode = String(localized: "search.failed.decode", defaultValue: "We received an unexpected response. Please try again.")
+        static let failedUnknown = String(localized: "search.failed.unknown", defaultValue: "Something went wrong. Check your connection and try again.")
         static let nullCoordsFormat = String(localized: "search.failed.nullCoords", defaultValue: "We don't have coordinates for %@ yet. Try a nearby city.")
         static let tryAgain = String(localized: "common.tryAgain", defaultValue: "Try Again")
     }
@@ -29,6 +33,11 @@ enum Strings {
         static let emptyDescriptionFormat = String(localized: "hotels.empty.description", defaultValue: "We couldn't find any day passes near %@.")
         static let backToSearch = String(localized: "hotels.empty.backToSearch", defaultValue: "Back to Search")
         static let failedHeadline = String(localized: "hotels.failed.headline", defaultValue: "Couldn't load hotels")
+        static let failedNetwork = String(localized: "hotels.failed.network", defaultValue: "You appear to be offline. Reconnect and try again.")
+        static let failedTimeout = String(localized: "hotels.failed.timeout", defaultValue: "Loading hotels took too long. Try again in a moment.")
+        static let failedServer = String(localized: "hotels.failed.server", defaultValue: "Our servers are having trouble. Please try again shortly.")
+        static let failedDecode = String(localized: "hotels.failed.decode", defaultValue: "We received an unexpected response. Please try again.")
+        static let failedUnknown = String(localized: "hotels.failed.unknown", defaultValue: "Something went wrong. Check your connection and try again.")
     }
 
     // MARK: - Accessibility
