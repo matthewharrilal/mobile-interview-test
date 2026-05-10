@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: AX5 Dynamic Type — Hotel listings section title + card text reflow
+tags:
+  - a11y
+  - dynamic-type
+  - ax5
+  - listings
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with
+# -UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityXXXL.
+# Captures section titles (editorialM 20pt → ~30+ at AX5 per Theme.swift:74)
+# reflowing, and CompactHotelCard fixed 220pt frame width forcing text wrap.
+# Source spec: 04-combo-matrix.md §5.12 flow 77.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 77-ax5-hotels-loaded

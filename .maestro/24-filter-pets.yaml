@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter — Pet-Friendly chip applied
+tags:
+  - filters
+  - states
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible: "Pet-Friendly"
+- takeScreenshot: 24-filter-pets-applied

@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter — Spa chip applied
+tags:
+  - filters
+  - states
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Spa"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible: "Spa"
+- takeScreenshot: 22-filter-spa-applied

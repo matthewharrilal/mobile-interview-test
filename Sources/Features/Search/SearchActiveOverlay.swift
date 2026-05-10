@@ -1,17 +1,24 @@
 // SearchActiveOverlay.swift
-// Architect-scaffolded surface for Transition 1 (search-pill blur-crossfade).
-// Renders a search bar pill + autocomplete content but carries NO blur, dim,
-// crossfade, or focus-delay logic — Worker A fills those in.
+// Transition 1 — search-pill blur-crossfade.
 //
-// Contract (do not change without coordinating via SendMessage):
-//   viewModel: the host's SearchViewModel — Worker A reads/writes its state but
-//              does not own its lifetime.
-//   ns:        the host's matched-geometry namespace. Worker A wires
-//              `matchedGeometryEffect(id: "searchPill", in: ns)` onto the pill
-//              so it morphs from the host's floating pill bar.
-//   onDismiss: called when the user taps outside the pill or the back chevron.
-//              Worker A is responsible for wrapping the dismissal in
-//              `withAnimation(.easeInOut(duration: 0.2))`.
+// Surface composition:
+//   • Full-screen backdrop = .ultraThinMaterial blur over the explore content
+//     beneath, with a 50% black dim layer on top. Tap-to-dismiss.
+//   • Floating chrome row = back chevron + active search pill (matched-geometry
+//     destination for "searchPill"). Carries `isSource: true` per the brief —
+//     the host hides its own pill while presentation == .searchActive, so the
+//     two `isSource: true` decls never coexist on screen.
+//   • Suggestions list fades in 80ms after surface lands (.easeOut(0.22)).
+//   • Keyboard appears as a separate event ~220ms post-mount via Task.sleep
+//     and `@FocusState`. Per-frame focus is view-local @State, never the VM.
+//
+// Animation contract (from 00-build-brief.md):
+//   • duration ~200ms, .easeInOut — NOT a spring
+//   • backdrop blur 0 → 24pt — perceptually carried by the Material's strength
+//     ramping with the overlay's `.transition(.opacity)` envelope from the host
+//   • backdrop dim 1.0 → 0.5 — the Color.black.opacity(0.5) overlay layer
+//   • keyboard delay 220ms — Task.sleep then fieldFocused = true
+//   • suggestions delay 80ms, easeOut 0.22 — staged entry inside the surface
 
 import SwiftUI
 
@@ -20,36 +27,76 @@ struct SearchActiveOverlay: View {
     let ns: Namespace.ID
     var onDismiss: () -> Void
 
+    /// Per-frame focus state — view-local, NOT in the ViewModel. Toggled
+    /// 220ms after the surface mounts so the morph completes before the
+    /// keyboard climbs over it.
+    @FocusState private var fieldFocused: Bool
+
+    /// Drives the suggestions list's staged fade-in. Animated to true on
+    /// appear with the brief-specified easeOut(0.22).delay(0.08) curve.
+    @State private var contentVisible: Bool = false
+
     var body: some View {
         ZStack(alignment: .top) {
-            // Worker A: replace this opaque background with a layered
-            // blur+dim of the explore content underneath. For the scaffold
-            // we use the page background so the surface reads as a normal
-            // sheet and the build stays sane.
-            Theme.Color.background
-                .ignoresSafeArea()
+            backdrop
 
             VStack(spacing: 0) {
                 searchBar
                 Divider()
                     .background(Theme.Color.border)
                 content
+                    .opacity(contentVisible ? 1 : 0)
             }
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.22).delay(0.08)) {
+                contentVisible = true
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(220))
+            fieldFocused = true
+        }
+    }
+
+    /// Brief: "Wrap call in `withAnimation(.easeInOut(duration: 0.2))`."
+    /// The host's onDismiss closure ALSO wraps the state mutation in the same
+    /// envelope; this inner wrap guarantees the animation even if a future
+    /// caller forgets to.
+    private func dismiss() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            onDismiss()
         }
     }
 }
 
-// MARK: - Search bar pill
+// MARK: - Backdrop (blur + dim, tap-to-dismiss)
 
 private extension SearchActiveOverlay {
-    /// Worker A: attach `matchedGeometryEffect(id: "searchPill", in: ns)` to
-    /// the pill container so the host's floating pill morphs into this one.
-    /// The keyboard appears as a separate event ~220ms after the surface
-    /// lands — wire that via `Task.sleep(for: .milliseconds(220))` and
-    /// `@FocusState`.
+    /// The backdrop sits beneath the chrome and IS the blur+dim layer the
+    /// brief specifies. Taps anywhere outside the search pill / chevron /
+    /// suggestion rows fall through to this view and dismiss.
+    var backdrop: some View {
+        Rectangle()
+            .fill(.ultraThinMaterial)
+            .overlay(Color.black.opacity(0.5))
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture { dismiss() }
+            .accessibilityLabel(Text("Dismiss search"))
+            .accessibilityAddTraits(.isButton)
+    }
+}
+
+// MARK: - Search bar pill (matched-geometry destination)
+
+private extension SearchActiveOverlay {
+    /// Back chevron + active search pill. The pill carries
+    /// `matchedGeometryEffect(id: "searchPill", in: ns, isSource: true)` so
+    /// the host's floating pill morphs into this active TextField.
     var searchBar: some View {
         HStack(spacing: Theme.Spacing.s) {
-            Button(action: onDismiss) {
+            Button(action: dismiss) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.Color.textPrimary)
@@ -70,6 +117,8 @@ private extension SearchActiveOverlay {
                 .foregroundStyle(Theme.Color.textPrimary)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+                .focused($fieldFocused)
+                .submitLabel(.search)
                 .accessibilityLabel(Text("Search hotels"))
                 if !viewModel.state.query.isEmpty {
                     Button { viewModel.send(.clearTapped) } label: {
@@ -83,6 +132,7 @@ private extension SearchActiveOverlay {
             .padding(.vertical, Theme.Spacing.s + 2)
             .background(Theme.Color.surfaceRecessed)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
+            .matchedGeometryEffect(id: "searchPill", in: ns, isSource: true)
         }
         .padding(.horizontal, Theme.Spacing.m)
         .padding(.vertical, Theme.Spacing.s)
@@ -136,8 +186,9 @@ private extension SearchActiveOverlay {
             LazyVStack(spacing: 0) {
                 ForEach(Array(places.enumerated()), id: \.element.id) { index, place in
                     Button {
-                        // Worker A / polish phase: bubble selection up via a
-                        // callback so the host can replace the nav path.
+                        // Polish phase: bubble selection up via a callback so
+                        // the host can replace the nav path. For now the VM
+                        // handles it (path-based; matches existing SearchView).
                         viewModel.send(.placeSelected(place))
                     } label: {
                         placeRow(place)

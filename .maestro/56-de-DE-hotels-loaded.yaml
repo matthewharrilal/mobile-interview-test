@@ -1,0 +1,33 @@
+appId: com.resortpass.interview.ResortPass
+name: Locale de-DE — Hotels loaded; section titles still English (gap)
+tags:
+  - locale
+  - de-DE
+  - hotels
+  - loaded
+# Source spec: team-audit/reports/04-combo-matrix.md §5.8 flow 56
+#
+# Per matrix flow 56 spec: section titles in HotelListings.swift:35-66 are
+# hardcoded English literals (NOT routed through Strings.swift). Even with
+# de-DE locale active, "Top picks", "Within walking distance", "Best value",
+# "All hotels" remain English. Capture documents the localization gap.
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-AppleLanguages": "(de-DE)"
+      "-AppleLocale": "de_DE"
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 56-de-hotels-loaded

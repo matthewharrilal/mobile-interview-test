@@ -1,0 +1,32 @@
+appId: com.resortpass.interview.ResortPass
+name: VoiceOver — hotel row combined accessibility label
+tags:
+  - a11y
+  - voiceover
+  - listings
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — must be pre-launched with -UIAccessibilityVoiceOverEnabled YES.
+# Captures the combined label from
+# Strings.Accessibility.hotelRowLabel (Strings.swift:40-46) format
+#   "<name>, rated X.X out of 5, <distance>, <price>"
+# CANNOT BE FULLY AUTOMATED for VoiceOver focus traversal — Maestro 2.5.1 has
+# no swipe-to-next-VO-element primitive. Captures rendered surface only.
+# Source spec: 04-combo-matrix.md §5.12 flow 69.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- takeScreenshot: 69-vo-hotel-row

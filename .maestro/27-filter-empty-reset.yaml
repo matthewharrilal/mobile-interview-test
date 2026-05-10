@@ -1,0 +1,43 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter empty reset — Show all hotels returns to All
+tags:
+  - filters
+  - empty
+  - states
+---
+# Same path as flow 26, then tap "Show all hotels" to reset filter.
+# Animation is snappy(0.25) per HotelListingsView.swift:174.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+- extendedWaitUntil:
+    visible: "No pet-friendly hotels here"
+    timeout: 5000
+- assertVisible: "Show all hotels"
+
+- tapOn: "Show all hotels"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Back to S8 — listings restored, "All" chip selected
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 5000
+- assertVisible: "All"
+- takeScreenshot: 27-filter-empty-reset-to-all

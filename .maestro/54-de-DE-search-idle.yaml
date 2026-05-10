@@ -1,0 +1,24 @@
+appId: com.resortpass.interview.ResortPass
+name: Locale de-DE — Search idle defaultValues leak through (no .strings table)
+tags:
+  - locale
+  - de-DE
+  - search
+  - idle
+# Source spec: team-audit/reports/04-combo-matrix.md §5.8 flow 54
+#
+# Per matrix §1.8: only English defaultValues are present in the bundle
+# (Sources/Strings/Strings.swift:6-48). Setting -AppleLanguages "(de-DE)"
+# exercises the localization indirection but every literal will fall back
+# to the English defaultValue. This flow proves the indirection is wired.
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-AppleLanguages": "(de-DE)"
+      "-AppleLocale": "de_DE"
+
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- assertVisible: "Search cities, hotels…"
+- takeScreenshot: 54-de-search-idle

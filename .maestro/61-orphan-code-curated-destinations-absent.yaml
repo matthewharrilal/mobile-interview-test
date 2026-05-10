@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Orphan code — Destination.curated grid never mounts
+tags:
+  - orphan-code
+  - dead-code
+  - search
+---
+# P0 — proves Destination + DiscoveryVibe types in Destination.swift:16-65 are
+# dead code per 01-codebase-map.md:1014. The six curated entries (Newport
+# Beach, Miami, Honolulu, Los Angeles, New York, Costa Mesa) must NOT appear
+# on the idle Search surface.
+# Source spec: 04-combo-matrix.md §5.9 flow 61.
+- launchApp:
+    clearState: true
+
+- assertVisible: "Where are you headed?"
+- assertVisible: "Pokédex"
+
+# None of the six curated destination labels should appear on idle Search.
+- assertNotVisible: "Miami"
+- assertNotVisible: "Honolulu"
+- assertNotVisible: "Los Angeles"
+- assertNotVisible: "New York"
+- assertNotVisible: "Costa Mesa"
+
+# "Newport Beach" alone is ambiguous (matches search results too) but on a
+# fresh launch with no query, it must not appear either.
+- assertNotVisible: "Newport Beach"
+- takeScreenshot: 61-orphan-no-curated

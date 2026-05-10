@@ -1,0 +1,26 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Search failed (S5) "Couldn't search" in landscape
+tags:
+  - orientation
+  - landscape
+  - search
+  - error
+  - manual-launch
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 48
+#
+# REQUIRES SCRIPT: -ui-test-fail-search YES launch arg.
+# App must be pre-launched with the failure flag externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass -ui-test-fail-search YES
+# Maestro drives the running instance from here (no launchApp).
+#
+# Run via: bash scripts/run-failure-flows.sh 48-landscape-search-failed
+---
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 5000
+- assertVisible: "Try Again"
+- takeScreenshot: 48-landscape-search-failed

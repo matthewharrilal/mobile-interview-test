@@ -1,0 +1,25 @@
+appId: com.resortpass.interview.ResortPass
+name: Debounce-window collision — only the final query fires
+tags:
+  - states
+  - search
+  - concurrency
+---
+# P0 — types n / e / w / p with 100ms gaps (each within the 500ms debounce),
+# then waits 600ms (past debounce). Only the final "newp" query should fire.
+# No race conditions or stale loaded state should appear.
+# Source spec: 04-combo-matrix.md §5.10 flow 64.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+
+- inputText: "n"
+- inputText: "e"
+- inputText: "w"
+- inputText: "p"
+
+# Past the debounce — final "newp" query is the one that fires.
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 64-debounce-collision

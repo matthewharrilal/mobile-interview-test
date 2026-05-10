@@ -1,0 +1,46 @@
+appId: com.resortpass.interview.ResortPass
+name: Slow 3G image loading — BrandedImagePlaceholder → fade(0.25) on land
+tags:
+  - states
+  - listings
+  - network
+  - visual-audit
+  - manual-launch
+---
+# P1 — REQUIRES NLC.
+# Pre-config (manual): enable Network Link Conditioner with the "3G" profile via
+#   Settings.app → Developer → Network Link Conditioner.
+# CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle NLC. Capture is
+# screenshot-only; Maestro records the staggered fade-in over time.
+# Source spec: 04-combo-matrix.md §5.11 flow 67.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 8000
+
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 20000
+
+# +1s — placeholders dominant.
+- takeScreenshot: 67-3g-images-1s
+
+# +3s — partial loads expected; fade(0.25) playing.
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 67-3g-images-3s
+
+# +6s.
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: 67-3g-images-6s
+
+# +10s — most images settled.
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 67-3g-images-10s

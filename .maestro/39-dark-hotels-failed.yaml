@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: Dark — Hotels failed (S11) "Couldn't load hotels" + Try Again in dark
+tags:
+  - theme
+  - dark
+  - hotels
+  - error
+  - manual-launch
+# Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 39
+#
+# REQUIRES SCRIPT: -ui-test-fail-hotels YES launch arg + dark appearance prelude.
+# DARK-MODE ORCHESTRATION (per matrix §7.2):
+#   xcrun simctl ui ${SIMID:-booted} appearance dark
+# App must be pre-launched with the failure flag externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass -ui-test-fail-hotels YES
+# Maestro drives the running instance from here (no launchApp).
+#
+# Run via: bash scripts/run-failure-flows.sh 39-dark-hotels-failed
+---
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 8000
+- assertVisible: "Try Again"
+- takeScreenshot: 39-dark-hotels-failed

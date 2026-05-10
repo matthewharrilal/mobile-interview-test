@@ -1,0 +1,38 @@
+appId: com.resortpass.interview.ResortPass
+name: Coordinate-tap regression — back chevron at 5%, 8% (iPhone 17 Pro calibration)
+tags:
+  - regression
+  - coordinate-fragility
+  - listings
+---
+# P1 — verifies the coord-tap calibration to iPhone 17 Pro / iOS 26.4
+# (per scripts/run-failure-flows.sh:9). If this flow fails, every existing
+# flow that uses tapOn point: "5%, 8%" needs recalibration.
+# This flow is intentionally authored to capture brittleness, not pass on
+# arbitrary devices.
+# Source spec: 04-combo-matrix.md §5.14 flow 80.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Coordinate-based back-chevron tap (mirrors flow 01 step 13).
+- tapOn:
+    point: "5%, 8%"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Back on Search — Pokédex nav title visible iff coord landed on the chevron.
+# If "Pokédex" is NOT visible, calibration has drifted.
+- assertVisible: "Pokédex"
+- takeScreenshot: 80-coord-back-confirmed

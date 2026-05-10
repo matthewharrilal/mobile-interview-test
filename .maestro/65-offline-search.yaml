@@ -1,0 +1,28 @@
+appId: com.resortpass.interview.ResortPass
+name: Offline search — failed-search surfaces network message
+tags:
+  - states
+  - error
+  - search
+  - network
+  - manual-launch
+---
+# P1 — REQUIRES NLC / offline mode.
+# Pre-config (manual): toggle simulator to airplane mode OR
+#   xcrun simctl status_bar <udid> override --dataNetwork none
+# CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle network state.
+# Source spec: 04-combo-matrix.md §5.11 flow 65.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+# URLError.notConnectedToInternet → catch-all in Search.swift:119 →
+# Strings.Search.failedHeadline ("Couldn't search") + failedNetwork message.
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 8000
+- assertVisible: "We couldn't reach our servers. Check your connection and try again."
+- assertVisible: "Try Again"
+- takeScreenshot: 65-offline-search-failed

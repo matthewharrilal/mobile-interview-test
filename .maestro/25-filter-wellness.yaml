@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter — Wellness chip applied
+tags:
+  - filters
+  - states
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Wellness"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible: "Wellness"
+- takeScreenshot: 25-filter-wellness-applied

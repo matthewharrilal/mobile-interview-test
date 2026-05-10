@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — HotelDetailScene (S12) detail expanded; 360pt parallax reflow
+tags:
+  - orientation
+  - landscape
+  - hotels
+  - detail
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 52
+#
+# Note (per 01:1061): the 360pt parallax-header height is fixed and does NOT
+# adjust to landscape height — known reflow risk on landscape iPhone where
+# 360pt > available content height. Capture for visual review.
+---
+- launchApp:
+    clearState: true
+
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Tap a card → matched-geom expansion to HotelDetailScene
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 52-landscape-detail-expanded

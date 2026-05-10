@@ -1,0 +1,26 @@
+appId: com.resortpass.interview.ResortPass
+name: Orphan code — SearchActiveOverlay never mounts
+tags:
+  - orphan-code
+  - dead-code
+  - search
+---
+# P0 — confirms SearchActiveOverlay.swift:112 placeholder "Search hotels"
+# never appears. Only the SearchView's own placeholder shows.
+# Source spec: 04-combo-matrix.md §5.9 flow 59.
+- launchApp:
+    clearState: true
+
+- assertVisible: "Search cities, hotels…"
+- takeScreenshot: 59-orphan-no-overlay-pre-tap
+
+- tapOn: "Search cities, hotels…"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Capture the post-tap state — the SearchActiveOverlay's "Search hotels"
+# placeholder must NOT be visible. Only SearchView's "Search cities, hotels…"
+# remains the source of truth (see SearchView.swift idle).
+- assertVisible: "Search cities, hotels…"
+- assertNotVisible: "Search hotels"
+- takeScreenshot: 59-orphan-no-overlay

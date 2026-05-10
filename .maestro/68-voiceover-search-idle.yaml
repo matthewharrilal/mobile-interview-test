@@ -1,0 +1,28 @@
+appId: com.resortpass.interview.ResortPass
+name: VoiceOver — Search idle field reads accessibility label
+tags:
+  - a11y
+  - voiceover
+  - search
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — must be pre-launched with -UIAccessibilityVoiceOverEnabled YES
+# (flow-author-A owns scripts/run-failure-flows.sh updates).
+# Maestro 2.5.1 has limited VoiceOver introspection; this flow captures the
+# rendered surface only. Spoken-text verification is out of scope.
+# Source spec: 04-combo-matrix.md §5.12 flow 68.
+- launchApp:
+    clearState: true
+
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- assertVisible: "Search cities, hotels…"
+
+# Verify the field's accessibility label exists on the hierarchy. Maestro
+# matches accessibility identifiers and labels equivalently. The expected
+# label per Strings.Accessibility.searchField (Strings.swift:37):
+#   "Search field. Type a city, neighborhood, or hotel name."
+# CANNOT BE FULLY AUTOMATED for spoken-text verification.
+- assertVisible: "Search field. Type a city, neighborhood, or hotel name."
+- takeScreenshot: 68-vo-search-idle

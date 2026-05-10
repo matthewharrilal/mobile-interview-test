@@ -1,0 +1,20 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Search empty (S4) "No places found" in landscape
+tags:
+  - orientation
+  - landscape
+  - search
+  - empty
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 47
+---
+- launchApp:
+    clearState: true
+
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "xyzqq"
+- extendedWaitUntil:
+    visible: "No places found"
+    timeout: 5000
+- takeScreenshot: 47-landscape-search-empty

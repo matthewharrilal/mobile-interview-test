@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: Locale de-DE — Search failed; defaultValue leaks through indirection
+tags:
+  - locale
+  - de-DE
+  - search
+  - error
+  - manual-launch
+# Source spec: team-audit/reports/04-combo-matrix.md §5.8 flow 55
+#
+# REQUIRES SCRIPT: -ui-test-fail-search YES launch arg + locale launch args.
+# App must be pre-launched with all three arguments externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass \
+#       -ui-test-fail-search YES \
+#       -AppleLanguages "(de-DE)" \
+#       -AppleLocale "de_DE"
+# Maestro drives the running instance from here (no launchApp).
+#
+# Per matrix §1.8: no .strings table populated for de-DE; English defaultValue
+# leaks through. Capture proves localization indirection is wired (no crash).
+#
+# Run via: bash scripts/run-failure-flows.sh 55-de-DE-failed-truncation
+---
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 5000
+- assertVisible: "Try Again"
+- takeScreenshot: 55-de-search-failed

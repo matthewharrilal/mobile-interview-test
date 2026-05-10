@@ -1,0 +1,43 @@
+appId: com.resortpass.interview.ResortPass
+name: Orphan code — HotelCard.swift never mounts on Listings
+tags:
+  - orphan-code
+  - dead-code
+  - listings
+---
+# P0 — visual confirmation that HotelCard (full-width editorial) never appears.
+# Only CompactHotelCard (220pt fixed width per CompactHotelCard.swift:81) is mounted.
+# Source spec: 04-combo-matrix.md §5.9 flow 58.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 58-orphan-no-hotelcard-1
+
+# Scroll down to surface deeper sections; HotelCard would, if mounted, show
+# at full screen width — capture for visual review.
+- swipe:
+    start: 50%, 75%
+    end: 50%, 25%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: 58-orphan-no-hotelcard-2
+
+- swipe:
+    start: 50%, 75%
+    end: 50%, 25%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: 58-orphan-no-hotelcard-3

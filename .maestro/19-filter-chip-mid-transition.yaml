@@ -1,0 +1,42 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter chip — mid snappy(0.25) transition frames
+tags:
+  - transitions
+  - visual-audit
+  - filters
+---
+# Visual review of FilterChipRow.swift:19 snappy(0.25) animation —
+# selected gradient fill per FilterChipRow.swift:55-65.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Tap Pool chip — capture frame at +0ms / +125ms / +250ms
+- tapOn: "Pool"
+- takeScreenshot: 19-chip-t0
+
+- waitForAnimationToEnd:
+    timeout: 125
+- takeScreenshot: 19-chip-t125
+
+- waitForAnimationToEnd:
+    timeout: 125
+- takeScreenshot: 19-chip-t250
+
+# Verify selected/unselected states
+- assertVisible: "Pool"
+- assertVisible: "All"

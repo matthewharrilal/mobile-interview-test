@@ -1,0 +1,42 @@
+appId: com.resortpass.interview.ResortPass
+name: Hero stretch — pull-down ken-burns
+tags:
+  - transitions
+  - visual-audit
+---
+# Visual-only: scaleEffect(1.0 + stretch/2400) per HotelListingsView.swift:210
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Pull-down overscroll to stretch hero
+- swipe:
+    start: 50%, 30%
+    end: 50%, 80%
+    duration: 500
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 20-stretch-t100
+
+- waitForAnimationToEnd:
+    timeout: 150
+- takeScreenshot: 20-stretch-peak
+
+- waitForAnimationToEnd:
+    timeout: 250
+- takeScreenshot: 20-stretch-snapback

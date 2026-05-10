@@ -1,0 +1,38 @@
+appId: com.resortpass.interview.ResortPass
+name: Reduce Motion — card tap spring animation gap (Reduce Motion not gated)
+tags:
+  - a11y
+  - reduce-motion
+  - listings
+  - regression
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — must be pre-launched with
+# -UIAccessibilityReduceMotionEnabled YES (flow-author-A owns the script).
+# Per 01-codebase-map.md:1124, NO accessibilityReduceMotion gate exists in
+# source. Spring(0.25, 0.95) plays unconditionally — capture the gap.
+# Source spec: 04-combo-matrix.md §5.12 flow 71.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 71-rm-card-tap-0
+
+# Tap the card; capture mid-spring (~100ms) and tail (~250ms).
+- tapOn:
+    point: "30%, 45%"
+- takeScreenshot: 71-rm-card-tap-100
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: 71-rm-card-tap-250

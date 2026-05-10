@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Hotels retry — tapping Try Again with flag still set re-fails
+tags:
+  - states
+  - error
+  - hotels
+  - retry
+  - manual-launch
+---
+# Run via: bash scripts/run-failure-flows.sh
+# (orchestrates -ui-test-fail-hotels YES launch arg)
+#
+# GAP-DOCUMENTING: Same as flow 28 — Try Again with launch flag still
+# active re-fires the load and re-fails. Documents retry-loop, not recovery.
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 8000
+- assertVisible: "Try Again"
+- takeScreenshot: 29-hotels-retry-pre
+
+- tapOn: "Try Again"
+
+# Loading skeleton, then re-fails (flag still active)
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 8000
+- assertVisible: "Try Again"
+- takeScreenshot: 29-hotels-retry-still-failed

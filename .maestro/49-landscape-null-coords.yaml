@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Null-coords guard (S6) shows "Couldn't search" in landscape
+tags:
+  - orientation
+  - landscape
+  - search
+  - null-coords
+  - edge-cases
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 49
+---
+- launchApp:
+    clearState: true
+
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "brooklyn"
+- extendedWaitUntil:
+    visible: "Brooklyn, Florida"
+    timeout: 5000
+
+# Tap on Brooklyn, Florida (which has null lat/lng in the real API)
+- tapOn: "Brooklyn, Florida"
+
+# Should NOT navigate to hotels; should show the failed state
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 3000
+- takeScreenshot: 49-landscape-null-coords

@@ -1,0 +1,48 @@
+appId: com.resortpass.interview.ResortPass
+name: Card-detail morph — spring(0.25, 0.95) envelope, 5 frames
+tags:
+  - transitions
+  - visual-audit
+---
+# GAP-DOCUMENTING: Maestro 0.15 has no precise <50ms wait primitive; we use
+# `waitForAnimationToEnd` with short timeouts as best-effort frame pacing.
+# Captured frames feed visual review of the spring envelope per
+# HotelListingsView.swift:309.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Tap card — capture every ~50ms for 250ms.
+- tapOn:
+    point: "30%, 45%"
+- takeScreenshot: 14-morph-frame-0
+
+- waitForAnimationToEnd:
+    timeout: 50
+- takeScreenshot: 14-morph-frame-50
+
+- waitForAnimationToEnd:
+    timeout: 50
+- takeScreenshot: 14-morph-frame-100
+
+- waitForAnimationToEnd:
+    timeout: 50
+- takeScreenshot: 14-morph-frame-150
+
+- waitForAnimationToEnd:
+    timeout: 50
+- takeScreenshot: 14-morph-frame-200

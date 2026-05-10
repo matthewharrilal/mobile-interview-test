@@ -1,0 +1,32 @@
+appId: com.resortpass.interview.ResortPass
+name: Rapid typing then clear — debounce cancellation back to idle
+tags:
+  - states
+  - search
+  - concurrency
+---
+# P0 — types four characters within the 500ms debounce window, then taps the
+# clear glyph (coord 92%, 15% per 02-existing-flow-inventory.md:73 calibration).
+# Expectation: the debounced fetch never resolves; UI returns to the idle
+# headline "Where are you headed?" (Search.swift:75-79).
+# Source spec: 04-combo-matrix.md §5.10 flow 63.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+
+# Four keystrokes — each within the debounce window.
+- inputText: "n"
+- inputText: "e"
+- inputText: "w"
+- inputText: "p"
+
+# Tap the clear glyph at the far right of the search field.
+- tapOn:
+    point: "92%, 15%"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Idle headline must be back — proves cancellation path.
+- assertVisible: "Where are you headed?"
+- takeScreenshot: 63-rapid-then-clear-idle

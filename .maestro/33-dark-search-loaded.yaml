@@ -1,0 +1,24 @@
+appId: com.resortpass.interview.ResortPass
+name: Dark — Search loaded (S3) place rows in dark variants
+tags:
+  - theme
+  - dark
+  - search
+  - loaded
+# Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 33
+#
+# DARK-MODE ORCHESTRATION (per matrix §7.2):
+# Runner must set system appearance to dark BEFORE this flow:
+#   xcrun simctl ui ${SIMID:-booted} appearance dark
+# Run via: bash scripts/run-failure-flows.sh 33-dark-search-loaded
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "Pokédex"
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 33-dark-search-loaded

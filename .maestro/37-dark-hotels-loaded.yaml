@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Dark — Hotels loaded (S8) parallax + cards in dark surface tokens
+tags:
+  - theme
+  - dark
+  - hotels
+  - loaded
+# Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 37
+#
+# DARK-MODE ORCHESTRATION (per matrix §7.2):
+#   xcrun simctl ui ${SIMID:-booted} appearance dark
+# Run via: bash scripts/run-failure-flows.sh 37-dark-hotels-loaded
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 37-dark-hotels-loaded

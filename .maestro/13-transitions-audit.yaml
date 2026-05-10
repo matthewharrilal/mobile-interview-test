@@ -1,0 +1,62 @@
+appId: com.resortpass.interview.ResortPass
+name: Transitions audit — card-tap morph + sheet dismiss multi-frame
+tags:
+  - transitions
+  - visual-audit
+---
+# GAP-DOCUMENTING: Maestro 0.15 cannot reliably hit exact +0/+75/+150/+250ms
+# offsets — `wait` (sleep) granularity drifts. Frames are best-effort and
+# named per spec; visual reviewer must verify timing approximately.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- assertVisible: "Top picks"
+
+# Tap card and capture multi-frame morph immediately.
+- tapOn:
+    point: "30%, 45%"
+- takeScreenshot: 13-morph-t0
+
+# +75ms — mid-spring frame (best-effort)
+- waitForAnimationToEnd:
+    timeout: 75
+- takeScreenshot: 13-morph-t75
+
+# +150ms — post-geometry settle
+- waitForAnimationToEnd:
+    timeout: 75
+- takeScreenshot: 13-morph-t150
+
+# +250ms — post content fade
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 13-morph-t250
+
+# Sheet should be visible — toolbar items hidden per HotelListingsView.swift:88
+
+# Dismiss via swipe-down
+- swipe:
+    start: 50%, 30%
+    end: 50%, 90%
+    duration: 600
+- takeScreenshot: 13-dismiss-mid
+
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: 13-dismiss-post

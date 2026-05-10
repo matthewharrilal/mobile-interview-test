@@ -1,0 +1,22 @@
+appId: com.resortpass.interview.ResortPass
+name: Increase Contrast — place-row chevron + StarRating opacity audit
+tags:
+  - a11y
+  - increase-contrast
+  - search
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with -UIAccessibilityIncreaseContrastEnabled YES.
+# Captures place-row chevron .opacity(0.6) (SearchView.swift:190) and
+# StarRating .opacity(0.35) (StarRating.swift:11) for WCAG verification.
+# Source spec: 04-combo-matrix.md §5.12 flow 75.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 75-ic-place-row

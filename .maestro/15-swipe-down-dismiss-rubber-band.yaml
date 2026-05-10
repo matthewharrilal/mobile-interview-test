@@ -1,0 +1,47 @@
+appId: com.resortpass.interview.ResortPass
+name: Swipe-down dismiss — rubber-band under 100pt (gap probe)
+tags:
+  - transitions
+  - visual-audit
+  - gap
+---
+# GAP-DOCUMENTING: Per audit 03:113 and 01:1044 — drag-writer for the
+# detail sheet is not yet implemented. A short downward swipe should
+# rubber-band the hero only without translating the card. This flow's
+# captured screenshots are expected to show NO rubber-band, confirming the
+# missing-feature gap rather than a regression.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Tap a card to enter detail (S12)
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Short swipe — under 100pt — should rubber-band hero only
+- swipe:
+    start: 50%, 30%
+    end: 50%, 50%
+    duration: 200
+- takeScreenshot: 15-rubber-band-mid
+
+# After release, expect snap-back (card still visible, dismiss NOT committed)
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: 15-rubber-band-snapback

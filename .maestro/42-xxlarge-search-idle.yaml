@@ -1,0 +1,23 @@
+appId: com.resortpass.interview.ResortPass
+name: Dynamic Type xxLarge — Search idle reflows without truncation
+tags:
+  - dynamic-type
+  - xxLarge
+  - search
+  - idle
+# Source spec: team-audit/reports/04-combo-matrix.md §5.6 flow 42
+#
+# Dynamic Type tier set via standard Apple launch argument
+# (-UIPreferredContentSizeCategoryName). Per matrix §7.2 / Dynamic Type Toggle:
+# this is the canonical mechanism; if it does not take effect, the runner can
+# fall back to: xcrun simctl ui ${SIMID:-booted} content_size XXL
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-UIPreferredContentSizeCategoryName": "UICTContentSizeCategoryXXL"
+
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- assertVisible: "Search cities, hotels…"
+- takeScreenshot: 42-xxl-search-idle

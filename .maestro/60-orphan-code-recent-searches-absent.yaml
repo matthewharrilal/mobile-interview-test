@@ -1,0 +1,47 @@
+appId: com.resortpass.interview.ResortPass
+name: Orphan code — RecentSearchesStore never renders a row
+tags:
+  - orphan-code
+  - dead-code
+  - search
+---
+# P0 — proves RecentSearchesStore.swift:8 is dead code per 01-codebase-map.md:1014.
+# After visiting a place and returning to Search, no "Recent" / "Recents" header
+# nor a recent-search row for "Newport Beach, California" should appear.
+# Source spec: 04-combo-matrix.md §5.9 flow 60.
+- launchApp:
+    clearState: true
+
+- assertVisible: "Where are you headed?"
+- takeScreenshot: 60-orphan-no-recents-idle-pre
+
+# Type, navigate to listings, then return to Search.
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# Back to Search via nav-bar chevron coord-tap.
+- tapOn:
+    point: "5%, 8%"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Tap the search field again to ensure the idle/active state is captured.
+- tapOn: "Search cities, hotels…"
+- waitForAnimationToEnd:
+    timeout: 800
+
+# Negative assertions — none of these should appear if RecentSearchesStore is
+# truly orphaned. Maestro continues if assertNotVisible holds.
+- assertNotVisible: "Recent"
+- assertNotVisible: "Recents"
+- takeScreenshot: 60-orphan-no-recents

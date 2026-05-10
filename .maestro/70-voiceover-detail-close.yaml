@@ -1,0 +1,38 @@
+appId: com.resortpass.interview.ResortPass
+name: VoiceOver — Detail close button reads "Close"
+tags:
+  - a11y
+  - voiceover
+  - detail
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — must be pre-launched with -UIAccessibilityVoiceOverEnabled YES.
+# Documents the i18n gap per 01-codebase-map.md:927 — HotelDetailScene.swift:161
+# uses hardcoded English "Close" rather than a Strings entry.
+# CANNOT BE FULLY AUTOMATED for VoiceOver focus assertion.
+# Source spec: 04-combo-matrix.md §5.12 flow 70.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Open detail via card tap (coords mirror flow 11 step 10).
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Hardcoded English "Close" per HotelDetailScene.swift:161 — flag as i18n gap.
+- assertVisible: "Close"
+- takeScreenshot: 70-vo-close-button

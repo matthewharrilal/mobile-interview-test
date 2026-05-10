@@ -25,15 +25,25 @@ struct HotelDetailScene: View {
     @Binding var dismissProgress: CGFloat
     var onDismiss: () -> Void
 
+    /// 0 while the matched-geometry hero is still morphing from the card,
+    /// 1 once the surrounding content has faded in. Driven by a `.task`
+    /// that fires ~160ms after mount (geometry settles ~150ms; the brief
+    /// asks for an 80–100ms beat AFTER that before content appears).
+    @State private var contentOpacity: Double = 0
+
     var body: some View {
         ZStack(alignment: .topLeading) {
+            // Detail surface — fades in BEHIND the morphing hero so the
+            // hero stays continuously visible while the surface arrives.
             Theme.Color.background
                 .ignoresSafeArea()
+                .opacity(contentOpacity)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     hero
                     content
+                        .opacity(contentOpacity)
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
@@ -43,6 +53,16 @@ struct HotelDetailScene: View {
             // gesture-driven dismiss. Stays useful as a fallback for users who
             // can't perform a swipe.
             closeButton
+                .opacity(contentOpacity)
+        }
+        .task {
+            // Geometry settles ~150ms (spring response 0.25, damping 0.95);
+            // brief asks for 80–100ms beat before content fade-in. 160ms total
+            // gives a 10ms guard against early frames + 80ms beat + 70ms hold.
+            try? await Task.sleep(for: .milliseconds(160))
+            withAnimation(.easeOut(duration: 0.25)) {
+                contentOpacity = 1
+            }
         }
     }
 }
@@ -50,8 +70,13 @@ struct HotelDetailScene: View {
 // MARK: - Hero
 
 private extension HotelDetailScene {
-    /// Hero region — Worker B wires `matchedGeometryEffect(id: sourceID, in: ns)`
-    /// onto this so the carousel card morphs into the full-bleed image.
+    /// Hero region — wears the same matched-geometry id as the carousel card,
+    /// so SwiftUI morphs the card into the hero (and back) on presentation
+    /// changes. The lift shadow during the morph reads as a "card stepping
+    /// off the page" — Airbnb uses an equivalent cue at frame 4–5 of their
+    /// expansion. `isSource: true` keeps the destination's geometry as the
+    /// authoritative anchor while the source is still in the carousel.
+    ///
     /// Worker C wires the `DragGesture` here for the swipe-down dismiss
     /// (gesture must NOT be on the whole scene — would eat ScrollView pan).
     var hero: some View {
@@ -61,6 +86,8 @@ private extension HotelDetailScene {
             hotelStar: hotel.hotelStar
         )
         .frame(height: 360)
+        .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+        .matchedGeometryEffect(id: sourceID, in: ns, isSource: true)
     }
 }
 

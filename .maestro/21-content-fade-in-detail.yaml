@@ -1,0 +1,45 @@
+appId: com.resortpass.interview.ResortPass
+name: Detail content fade-in — easeOut(0.25) ramp
+tags:
+  - transitions
+  - visual-audit
+---
+# Visual-only: contentOpacity 0→1 per HotelDetailScene.swift:60 (sleep ends
+# at 160ms, easeOut(0.25) fade completes ~410ms). Close button (chevron.down)
+# becomes visible per HotelDetailScene.swift:153.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Tap card → detail
+- tapOn:
+    point: "30%, 45%"
+
+# +160ms — sleep ends, fade about to begin
+- waitForAnimationToEnd:
+    timeout: 160
+- takeScreenshot: 21-content-t160
+
+# +200ms — mid-fade
+- waitForAnimationToEnd:
+    timeout: 40
+- takeScreenshot: 21-content-t200
+
+# +410ms — post-fade
+- waitForAnimationToEnd:
+    timeout: 210
+- takeScreenshot: 21-content-t410

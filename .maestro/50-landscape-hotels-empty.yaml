@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Hotels empty (S10) "No hotels available" in landscape
+tags:
+  - orientation
+  - landscape
+  - hotels
+  - empty
+  - manual-launch
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 50
+#
+# REQUIRES SCRIPT: -ui-test-empty-hotels YES launch arg.
+# App must be pre-launched with the empty flag externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass -ui-test-empty-hotels YES
+# Maestro drives the running instance from here (no launchApp).
+#
+# Run via: bash scripts/run-failure-flows.sh 50-landscape-hotels-empty
+---
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "No hotels available"
+    timeout: 5000
+- assertVisible: "Back to Search"
+- takeScreenshot: 50-landscape-hotels-empty

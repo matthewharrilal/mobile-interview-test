@@ -1,0 +1,20 @@
+appId: com.resortpass.interview.ResortPass
+name: AX5 Dynamic Type — Search idle headline reflow
+tags:
+  - a11y
+  - dynamic-type
+  - ax5
+  - search
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with
+# -UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityXXXL.
+# Verifies "Where are you headed?" reflows to multi-line at AX5.
+# Source spec: 04-combo-matrix.md §5.12 flow 76.
+- launchApp:
+    clearState: true
+
+- assertVisible: "Pokédex"
+- assertVisible: "Where are you headed?"
+- takeScreenshot: 76-ax5-search-idle

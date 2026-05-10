@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Hotels failed (S11) "Couldn't load hotels" in landscape
+tags:
+  - orientation
+  - landscape
+  - hotels
+  - error
+  - manual-launch
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 51
+#
+# REQUIRES SCRIPT: -ui-test-fail-hotels YES launch arg.
+# App must be pre-launched with the failure flag externally:
+#   xcrun simctl launch <udid> com.resortpass.interview.ResortPass -ui-test-fail-hotels YES
+# Maestro drives the running instance from here (no launchApp).
+#
+# Run via: bash scripts/run-failure-flows.sh 51-landscape-hotels-failed
+---
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 8000
+- assertVisible: "Try Again"
+- takeScreenshot: 51-landscape-hotels-failed

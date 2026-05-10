@@ -1,0 +1,34 @@
+appId: com.resortpass.interview.ResortPass
+name: Dynamic Type xxLarge — Empty-filter state reflows
+tags:
+  - dynamic-type
+  - xxLarge
+  - hotels
+  - filter
+  - empty-filter
+# Source spec: team-audit/reports/04-combo-matrix.md §5.6 flow 45
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-UIPreferredContentSizeCategoryName": "UICTContentSizeCategoryXXL"
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible: "No Pet-Friendly hotels here"
+- assertVisible: "Show all hotels"
+- takeScreenshot: 45-xxl-empty-filter

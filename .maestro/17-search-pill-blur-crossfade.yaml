@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Search pill blur crossfade — overlay mount probe (gap)
+tags:
+  - transitions
+  - visual-audit
+  - gap
+---
+# GAP-DOCUMENTING: Per audit 01:1010 + 03:60-66 — SearchActiveOverlay is
+# orphan code; the "Search hotels" overlay placeholder is never mounted.
+# Tapping the pill simply focuses the system TextField. We assert the
+# overlay's literal "Search hotels" is NOT visible to make the gap explicit.
+
+- launchApp:
+    clearState: true
+
+- assertVisible: "Search cities, hotels…"
+- takeScreenshot: 17-pill-search-idle
+
+# Tap the pill — easeInOut(0.2) crossfade window per 03:60-66
+- tapOn: "Search cities, hotels…"
+- takeScreenshot: 17-pill-t0
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 17-pill-t100
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 17-pill-t200
+
+# Keyboard appears after the easeInOut window (~220ms)
+- waitForAnimationToEnd:
+    timeout: 220
+- takeScreenshot: 17-pill-keyboard
+
+# Overlay placeholder should NEVER appear (orphan code finding)
+- assertNotVisible: "Search hotels"

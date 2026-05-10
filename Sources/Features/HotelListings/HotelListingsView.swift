@@ -2,16 +2,13 @@
 // Sectioned editorial layout: parallax location header → filter chip strip →
 // curated horizontal carousels per section. Image-bleed cards.
 //
-// Hosts the transition shell (architect-scaffolded) for three Airbnb-style
-// transitions:
-//   1. Search-pill blur-crossfade  → SearchActiveOverlay (Worker A)
-//   2. Card → detail expansion      → HotelDetailScene  (Worker B)
-//   3. Swipe-down dismiss           → HotelDetailScene  (Worker C)
+// Listings is a terminal destination of the search flow — the user lands
+// here after picking a place; the only re-search affordance is the nav back
+// chevron. No search pill on this screen.
 //
-// Composition is a ZStack — explore content underneath, search-pill chrome
-// floating on top, and conditional overlay layers (search / detail) mounted
-// only while their state is active. See ux-research/team/01-integration-plan.md
-// for the boundary between the three workers.
+// Hosted transition: card → detail expansion (matched-geometry + drag
+// dismiss). Composition is a ZStack — explore content underneath, the
+// detail scene mounted only while expanded.
 
 import SwiftUI
 
@@ -19,12 +16,10 @@ import SwiftUI
 
 struct HotelListingsView: View {
     @State private var viewModel: HotelListingsViewModel
-    @State private var searchViewModel: SearchViewModel
     @Environment(\.dismiss) private var dismiss
 
-    /// Single matched-geometry namespace for every cross-cutting morph:
-    /// "searchPill" (host pill ↔ overlay pill), "card-…" (carousel card ↔
-    /// detail hero). One namespace = one morph graph; ids stay distinct.
+    /// Single matched-geometry namespace for the card ↔ detail morph.
+    /// Card sources use ids "card-<section>-<hotel>".
     @Namespace private var ns
 
     @State private var selectedFilter: HotelListingsState.Filter = .all
@@ -41,26 +36,16 @@ struct HotelListingsView: View {
             client: client,
             logger: .live
         ))
-        // TODO(polish): thread `.live()` SearchClient from ResortPassApp.
-        _searchViewModel = State(initialValue: SearchViewModel(
-            client: .preview,
-            logger: .silent
-        ))
     }
 
     init(viewModel: HotelListingsViewModel) {
         _viewModel = State(initialValue: viewModel)
-        _searchViewModel = State(initialValue: SearchViewModel(
-            client: .preview,
-            logger: .silent
-        ))
     }
 
-    /// Three discrete top-level layers. The base layer is always mounted;
-    /// the other two are conditional and host their own surfaces.
+    /// Two discrete top-level layers. The base layer is always mounted;
+    /// the detail layer is conditional and hosts its own surface.
     enum PresentationLayer: Equatable {
         case browsing
-        case searchActive
         case detailExpanded(hotel: Hotel, sourceID: String)
     }
 
@@ -71,31 +56,13 @@ struct HotelListingsView: View {
                 .opacity(exploreOpacity)
                 .allowsHitTesting(presentation == .browsing)
 
-            // Floating search-pill chrome — pinned, never scrolls. Source
-            // identity for the "searchPill" matched-geometry. Hidden when
-            // the search overlay is up (the overlay carries the matching id).
-            if presentation != .searchActive {
-                searchPillBar
-                    .matchedGeometryEffect(id: "searchPill", in: ns)
-                    .padding(.horizontal, Theme.Spacing.m)
-                    .padding(.top, Theme.Spacing.s)
-            }
-
-            // Worker A's surface — fills in blur/dim/crossfade.
-            if presentation == .searchActive {
-                SearchActiveOverlay(
-                    viewModel: searchViewModel,
-                    ns: ns,
-                    onDismiss: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            presentation = .browsing
-                        }
-                    }
-                )
-                .transition(.opacity)
-            }
-
-            // Workers B + C surface — fill in matched-geometry + drag.
+            // Detail surface — fills in matched-geometry + drag.
+            // The matched-geometry hero inside HotelDetailScene carries the
+            // visible morph; the surface itself uses opacity-only as its
+            // mount/unmount transition (driving the morph through `.scale`
+            // would double-animate the geometry). The spring envelope on the
+            // state mutation governs the timing — see `withAnimation` calls
+            // on the card tap and `onDismiss` below.
             if case .detailExpanded(let hotel, let sourceID) = presentation,
                case .loaded(let loaded) = viewModel.state.status {
                 HotelDetailScene(
@@ -105,7 +72,7 @@ struct HotelListingsView: View {
                     sourceID: sourceID,
                     dismissProgress: $dismissProgress,
                     onDismiss: {
-                        withAnimation(.easeInOut(duration: 0.25)) {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
                             presentation = .browsing
                             dismissProgress = 0
                         }
@@ -125,16 +92,15 @@ struct HotelListingsView: View {
         }
     }
 
-    /// Blur applied to the explore layer. Ramps in proportional to how
-    /// "expanded" the detail layer is (1 - dismissProgress while the layer
-    /// is mounted; otherwise 0). Worker B can re-tune the 24pt ceiling.
+    /// Blur applied to the explore layer while detail is up. Ramps 0→24pt
+    /// as `dismissProgress` clears (1 - progress).
     private var exploreBlurRadius: CGFloat {
         guard case .detailExpanded = presentation else { return 0 }
         return (1 - dismissProgress) * 24
     }
 
-    /// Dim applied to the explore layer alongside the blur. Same logic —
-    /// Worker B refines the 0.5 floor.
+    /// Dim applied to the explore layer alongside the blur. Detail dims to
+    /// 0.5 when fully expanded (progress=0) and clears to 1.0 as it dismisses.
     private var exploreOpacity: Double {
         guard case .detailExpanded = presentation else { return 1.0 }
         return 1.0 - (1.0 - Double(dismissProgress)) * 0.5
@@ -157,41 +123,6 @@ private extension HotelListingsView {
                 failedState(message)
             }
         }
-    }
-}
-
-// MARK: - Search pill (host source)
-
-private extension HotelListingsView {
-    /// Pill that matches the search bar inside `SearchActiveOverlay`. Tapping
-    /// commits the `searchActive` state through the view's intent system
-    /// equivalent here (a SwiftUI `withAnimation` envelope around state mutation).
-    var searchPillBar: some View {
-        Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                presentation = .searchActive
-            }
-        } label: {
-            HStack(spacing: Theme.Spacing.s) {
-                Image(systemName: Theme.Icon.search)
-                    .foregroundStyle(Theme.Color.textTertiary)
-                Text("Search hotels")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Color.textSecondary)
-                Spacer()
-            }
-            .padding(.horizontal, Theme.Spacing.m)
-            .padding(.vertical, Theme.Spacing.s + 2)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
-                    .stroke(Theme.Color.border, lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Search hotels"))
-        .accessibilityAddTraits(.isSearchField)
     }
 }
 
@@ -370,7 +301,12 @@ private extension HotelListingsView {
                             hotel: hotel,
                             currency: currency,
                             onTap: {
-                                withAnimation(.easeInOut(duration: 0.25)) {
+                                // Near-critical spring (response 0.25, damping
+                                // 0.95) gives the ~150ms geometry duration the
+                                // brief calls for, with no overshoot — the
+                                // hero lands clean before the content fade-in
+                                // beat starts inside HotelDetailScene.
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
                                     presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
                                 }
                             }
@@ -378,7 +314,7 @@ private extension HotelListingsView {
                         .matchedGeometryEffect(id: sourceID, in: ns)
                         .contextMenu {
                             Button {
-                                withAnimation(.easeInOut(duration: 0.25)) {
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
                                     presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
                                 }
                             } label: {

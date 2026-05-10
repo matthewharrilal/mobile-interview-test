@@ -1,0 +1,28 @@
+appId: com.resortpass.interview.ResortPass
+name: iPad — Hotel listings parallax + carousel layout
+tags:
+  - device
+  - ipad
+  - listings
+---
+# device: iPad Pro 13-inch
+# P1 — runner must boot the iPad Pro 13-inch simulator before invoking this
+# flow. Maestro doesn't directly select device class.
+#   xcrun simctl boot "iPad Pro 13-inch (M4)"
+# (Or substitute the available iPad Pro 13-inch UDID; see `xcrun simctl list devices`.)
+# Source spec: 04-combo-matrix.md §5.13 flow 78.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 78-ipad-hotels

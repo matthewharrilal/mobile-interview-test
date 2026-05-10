@@ -1,0 +1,38 @@
+appId: com.resortpass.interview.ResortPass
+name: iPad landscape — Hotel detail expanded layout
+tags:
+  - device
+  - ipad
+  - detail
+  - orientation
+---
+# device: iPad Pro 13-inch
+# P1 — runner must boot the iPad Pro 13-inch simulator before invoking.
+#   xcrun simctl boot "iPad Pro 13-inch (M4)"
+# Captures HotelDetailScene fullscreen behavior on iPad landscape; the 360pt
+# fixed-height parallax hero (HotelListingsView.swift:206) is a reflow risk.
+# Source spec: 04-combo-matrix.md §5.13 flow 79.
+- launchApp:
+    clearState: true
+
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Open detail via card tap. Note: coordinate calibration is iPhone 17 Pro;
+# iPad will likely miss this card. The flow captures whatever lands.
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 79-ipad-detail

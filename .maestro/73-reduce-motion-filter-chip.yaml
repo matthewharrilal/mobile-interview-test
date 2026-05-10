@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Reduce Motion — filter chip snappy(0.25) plays unconditionally
+tags:
+  - a11y
+  - reduce-motion
+  - filter
+  - regression
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with -UIAccessibilityReduceMotionEnabled YES.
+# Captures the snappy(0.25) chip swap from FilterChipRow.swift:19 playing
+# despite Reduce Motion ON.
+# Source spec: 04-combo-matrix.md §5.12 flow 73.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 73-rm-chip-0
+
+# Tap "Pool" filter chip — animation should NOT play if Reduce Motion is
+# honoured, but matrix predicts it does.
+- tapOn: "Pool"
+- takeScreenshot: 73-rm-chip-125
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: 73-rm-chip-250

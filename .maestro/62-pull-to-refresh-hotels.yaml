@@ -1,0 +1,39 @@
+appId: com.resortpass.interview.ResortPass
+name: Pull-to-refresh on Hotel Listings — refreshable indicator + reload
+tags:
+  - states
+  - listings
+  - refresh
+---
+# P1 — exercises the SwiftUI .refreshable modifier on HotelListingsView. The
+# pull gesture should expose the refresh indicator and re-trigger
+# .retryTapped (HotelListingsView.swift:150 → startFetch).
+# Source spec: 04-combo-matrix.md §5.10 flow 62.
+- launchApp:
+    clearState: true
+
+# Land on Listings.
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 62-ptr-pre-pull
+
+# Pull-down with hold (start near top, drag to mid-screen, slow duration).
+- swipe:
+    start: 50%, 30%
+    end: 50%, 80%
+    duration: 800
+- takeScreenshot: 62-ptr-mid
+
+- waitForAnimationToEnd:
+    timeout: 4000
+- assertVisible: "Top picks"
+- takeScreenshot: 62-ptr-post

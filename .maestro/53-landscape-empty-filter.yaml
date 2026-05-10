@@ -1,0 +1,34 @@
+appId: com.resortpass.interview.ResortPass
+name: Landscape — Empty-filter state (S9) reflows in landscape
+tags:
+  - orientation
+  - landscape
+  - hotels
+  - filter
+  - empty-filter
+# Source spec: team-audit/reports/04-combo-matrix.md §5.7 flow 53
+---
+- launchApp:
+    clearState: true
+
+- setOrientation: LANDSCAPE_RIGHT
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible: "No Pet-Friendly hotels here"
+- assertVisible: "Show all hotels"
+- takeScreenshot: 53-landscape-empty-filter

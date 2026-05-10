@@ -1,0 +1,33 @@
+appId: com.resortpass.interview.ResortPass
+name: Dark — Null-coords guard (S6) shows "Couldn't search" in dark
+tags:
+  - theme
+  - dark
+  - search
+  - null-coords
+  - edge-cases
+# Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 36
+#
+# DARK-MODE ORCHESTRATION (per matrix §7.2):
+#   xcrun simctl ui ${SIMID:-booted} appearance dark
+# Run via: bash scripts/run-failure-flows.sh 36-dark-null-coords-failed
+# (no -ui-test-* flag required — null-coords surfaced via the guard at
+#  Sources/Features/Search/Search.swift:81-89)
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "brooklyn"
+- extendedWaitUntil:
+    visible: "Brooklyn, Florida"
+    timeout: 5000
+
+# Tap on Brooklyn, Florida (which has null lat/lng in the real API)
+- tapOn: "Brooklyn, Florida"
+
+# Should NOT navigate to hotels; should show the failed state
+- extendedWaitUntil:
+    visible: "Couldn't search"
+    timeout: 3000
+- takeScreenshot: 36-dark-null-coords-failed

@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Bold Text — CompactHotelCard eyebrow truncation risk (size 10 inline)
+tags:
+  - a11y
+  - bold-text
+  - listings
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with -UIAccessibilityBoldTextEnabled YES.
+# Captures the size 10 eyebrow uppercase per CompactHotelCard.swift:42 — bold
+# rendering at fixed inline .system(size: 10) does not scale; per
+# 01-codebase-map.md:1060 this is a known truncation risk.
+# Source spec: 04-combo-matrix.md §5.12 flow 74.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 74-bold-eyebrow

@@ -1,0 +1,36 @@
+appId: com.resortpass.interview.ResortPass
+name: Filter empty — Pet-Friendly likely yields zero matches
+tags:
+  - filters
+  - empty
+  - states
+---
+# HotelListingsView.swift:164 composes "No <name> hotels here" via lowercased
+# displayName. For Pet-Friendly the rendered text is
+# "No pet-friendly hotels here". HotelListingsView.swift:180 surfaces
+# "Show all hotels" reset button.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+
+- extendedWaitUntil:
+    visible: "No pet-friendly hotels here"
+    timeout: 5000
+- assertVisible: "Show all hotels"
+- takeScreenshot: 26-filter-empty-pets

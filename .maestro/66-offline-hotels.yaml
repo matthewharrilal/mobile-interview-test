@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Offline hotels — search loaded online, then airplane → tap → failed-load
+tags:
+  - states
+  - error
+  - hotels
+  - network
+  - manual-launch
+---
+# P1 — REQUIRES NLC / offline toggle mid-flow.
+# Pre-config (manual): start ONLINE, then after the search loaded screenshot,
+#   toggle airplane mode (or run `xcrun simctl status_bar <udid> override
+#   --dataNetwork none`) before tapping the place row.
+# CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle network mid-flow.
+# The runner must pause this flow at the SCREENSHOT 66-offline-hotels-pre-tap
+# step, toggle network, then resume.
+# Source spec: 04-combo-matrix.md §5.11 flow 66.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: 66-offline-hotels-pre-tap
+
+# (Runner toggles airplane mode here.)
+- tapOn: "Newport Beach, California"
+
+# HTTPClient yields URLError → catch-all in HotelListings.swift:204 →
+# Strings.Hotels.failedHeadline.
+- extendedWaitUntil:
+    visible: "Couldn't load hotels"
+    timeout: 12000
+- assertVisible: "Try Again"
+- takeScreenshot: 66-offline-hotels-failed

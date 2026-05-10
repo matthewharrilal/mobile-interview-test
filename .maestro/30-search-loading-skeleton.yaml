@@ -1,0 +1,22 @@
+appId: com.resortpass.interview.ResortPass
+name: Search loading — skeleton rows during debounce window
+tags:
+  - states
+  - loading
+  - search
+  - visual-audit
+---
+# GAP-DOCUMENTING: Maestro 0.15 cannot freeze mid-debounce reliably; the
+# +250ms screenshot is best-effort. Skeleton has no asserted literal
+# (visual-only check per SearchView.swift:106-139).
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "n"
+
+# Capture during debounce + loading window
+- waitForAnimationToEnd:
+    timeout: 250
+- takeScreenshot: 30-search-loading-skeleton

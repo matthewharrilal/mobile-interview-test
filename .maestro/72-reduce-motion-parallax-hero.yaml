@@ -1,0 +1,39 @@
+appId: com.resortpass.interview.ResortPass
+name: Reduce Motion — parallax hero scaleEffect plays (gap)
+tags:
+  - a11y
+  - reduce-motion
+  - listings
+  - regression
+  - p2
+---
+# P2 a11y flow — runner may skip under time pressure per audit-lead directive 2026-05-10.
+# REQUIRES SCRIPT — pre-launch with -UIAccessibilityReduceMotionEnabled YES.
+# Captures the ken-burns scaleEffect(1.0 + stretch/2400) playing unconditionally
+# during pull-down — per matrix §5.12, this should be gated by Reduce Motion.
+# Source spec: 04-combo-matrix.md §5.12 flow 72.
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Pull-down to stretch the parallax hero.
+- swipe:
+    start: 50%, 30%
+    end: 50%, 80%
+    duration: 800
+- takeScreenshot: 72-rm-parallax-mid
+
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: 72-rm-parallax-released

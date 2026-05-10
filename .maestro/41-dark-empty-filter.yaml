@@ -1,0 +1,41 @@
+appId: com.resortpass.interview.ResortPass
+name: Dark — Empty filter (S9) "No Pet-Friendly hotels here" in dark
+tags:
+  - theme
+  - dark
+  - hotels
+  - filter
+  - empty-filter
+# Source spec: team-audit/reports/04-combo-matrix.md §5.5 flow 41
+#
+# DARK-MODE ORCHESTRATION (per matrix §7.2):
+#   xcrun simctl ui ${SIMID:-booted} appearance dark
+# Run via: bash scripts/run-failure-flows.sh 41-dark-empty-filter
+#
+# NOTE: empty-filter ("Pet-Friendly") relies on the heuristic at
+# Sources/Features/HotelListings/HotelListings.swift:122 (substring "pet, Pet")
+# yielding zero matches against the Newport Beach test data. If real data
+# changes such that pet matches do exist, swap to a different filter.
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- tapOn: "Pet-Friendly"
+- waitForAnimationToEnd:
+    timeout: 1500
+- assertVisible: "No Pet-Friendly hotels here"
+- assertVisible: "Show all hotels"
+- takeScreenshot: 41-dark-empty-filter

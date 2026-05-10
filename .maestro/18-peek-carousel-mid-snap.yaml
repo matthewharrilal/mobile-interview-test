@@ -1,0 +1,45 @@
+appId: com.resortpass.interview.ResortPass
+name: Top picks carousel — mid-snap and settle frames
+tags:
+  - transitions
+  - visual-audit
+---
+# Visual-only: scale 0.94 + opacity 0.7 phase per HotelListingsView.swift:327-331
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Horizontal swipe across Top picks carousel
+- swipe:
+    start: 80%, 60%
+    end: 20%, 60%
+    duration: 500
+
+# +100ms — mid-snap
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 18-peek-t100
+
+# +250ms — mid-settle
+- waitForAnimationToEnd:
+    timeout: 150
+- takeScreenshot: 18-peek-t250
+
+# +500ms — post-settle
+- waitForAnimationToEnd:
+    timeout: 250
+- takeScreenshot: 18-peek-t500

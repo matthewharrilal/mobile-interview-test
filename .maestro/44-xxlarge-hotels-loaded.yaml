@@ -1,0 +1,30 @@
+appId: com.resortpass.interview.ResortPass
+name: Dynamic Type xxLarge — Hotels loaded; CompactHotelCard eyebrow scaling check
+tags:
+  - dynamic-type
+  - xxLarge
+  - hotels
+  - loaded
+# Source spec: team-audit/reports/04-combo-matrix.md §5.6 flow 44
+#
+# Note (per 01:1060): CompactHotelCard.swift:42 sets eyebrow to .system(size: 10)
+# without relativeTo:, so it does NOT scale at xxLarge. Capture for visual review.
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-UIPreferredContentSizeCategoryName": "UICTContentSizeCategoryXXL"
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: 44-xxl-hotels-loaded

@@ -1,0 +1,58 @@
+appId: com.resortpass.interview.ResortPass
+name: Swipe-down dismiss — commit beyond 200pt (gap probe)
+tags:
+  - transitions
+  - visual-audit
+  - gap
+---
+# GAP-DOCUMENTING: Per audit 03:114 and 01:1044 — committed dismiss should
+# follow a 1:1 drag past 200pt. Current implementation appears to fire the
+# .opacity transition immediately on dismiss, not as a 1:1 drag. Captured
+# screenshots prove the gap; "Top picks" reappears regardless once dismissed.
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+
+# Enter detail
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Long swipe — >200pt should commit dismiss
+- swipe:
+    start: 50%, 30%
+    end: 50%, 90%
+    duration: 600
+- takeScreenshot: 16-commit-0
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 16-commit-100
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 16-commit-200
+
+- waitForAnimationToEnd:
+    timeout: 100
+- takeScreenshot: 16-commit-300
+
+# Confirm dismissed back to listings
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 5000

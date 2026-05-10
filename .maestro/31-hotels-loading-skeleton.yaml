@@ -1,0 +1,29 @@
+appId: com.resortpass.interview.ResortPass
+name: Hotels loading — skeleton sections during initial load
+tags:
+  - states
+  - loading
+  - hotels
+  - visual-audit
+---
+# GAP-DOCUMENTING: Maestro 0.15 cannot reliably hit +0ms vs. +500ms during
+# the initial load window. Both screenshots are best-effort and visual-only
+# (240pt placeholder + 2 skeleton sections per HotelListingsView.swift:348-378).
+
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+- tapOn: "Newport Beach, California"
+# Capture immediately (before extendedWaitUntil for "Top picks")
+- takeScreenshot: 31-hotels-loading-t0
+
+- waitForAnimationToEnd:
+    timeout: 500
+- takeScreenshot: 31-hotels-loading-t500
