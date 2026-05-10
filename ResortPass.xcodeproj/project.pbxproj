@@ -14,6 +14,7 @@
 		1CE7B6ED3D3BE5B98FAD4B54 /* HotelImageCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F3011C8C200A72DF8BBDBC /* HotelImageCarousel.swift */; };
 		2215EBE716E6E30B02E89512 /* Decoders.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5595A077652868FD3B09F8 /* Decoders.swift */; };
 		24BCA94AA7E6BE15C023EE0D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93270355FF5E6240463286A5 /* Theme.swift */; };
+		381597D4ACD40260834AD02F /* CompactHotelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8E52F79B8B5A071A06FB8A /* CompactHotelCard.swift */; };
 		3D5B8FB17E531C95A47E8DD3 /* HotelListingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECBAA9276F58F2DAA81D57D2 /* HotelListingsViewModelTests.swift */; };
 		46FDEC8749BEA964B3263ADD /* HotelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FFD8F1B22D03D0AE31904D /* HotelTests.swift */; };
 		59FC9F4E052336AEAA049105 /* Hotel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CACA5C69132F852CD3A4220 /* Hotel.swift */; };
@@ -32,6 +33,7 @@
 		C6FB8C21604EAFF9AC60A8AE /* AppDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB5C6641D27F68D177FE243 /* AppDestination.swift */; };
 		CADA8323064AD86330BBF7EB /* SearchViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */; };
 		D3761BB7E2DD38F3B31769ED /* HTTPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 741C9BB33275F71CC43C8032 /* HTTPClient.swift */; };
+		E21E4F72E79CE8F6D80987C4 /* FilterChipRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D2D8917A8C845AD1F71772E /* FilterChipRow.swift */; };
 		E2EE3DC787CFE84E5E6E527E /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54B689C116041413656661D /* CachedAsyncImage.swift */; };
 		E6372B4641DF613D0741E2FF /* SearchClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */; };
 		E730B4B2E9F7EEFA06D1965B /* HotelsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */; };
@@ -70,6 +72,8 @@
 		53A42ECDBE7DF2FD8C200DDC /* HotelsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelsClient.swift; sourceTree = "<group>"; };
 		5565DB3072B904799D1A1679 /* ResortPassTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ResortPassTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModelTests.swift; sourceTree = "<group>"; };
+		5B8E52F79B8B5A071A06FB8A /* CompactHotelCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactHotelCard.swift; sourceTree = "<group>"; };
+		5D2D8917A8C845AD1F71772E /* FilterChipRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterChipRow.swift; sourceTree = "<group>"; };
 		65FFD8F1B22D03D0AE31904D /* HotelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelTests.swift; sourceTree = "<group>"; };
 		6B497B1640161E8BD5E411D0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		707DC5FFD7BF85A428FBA516 /* LogClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogClient.swift; sourceTree = "<group>"; };
@@ -130,6 +134,8 @@
 				8914081E7D0E8CFC1A1188AD /* .gitkeep */,
 				9F568419AAE3F48EFDC88E62 /* BrandedImagePlaceholder.swift */,
 				92B01FC824C9E3C19412A909 /* CardPressStyle.swift */,
+				5B8E52F79B8B5A071A06FB8A /* CompactHotelCard.swift */,
+				5D2D8917A8C845AD1F71772E /* FilterChipRow.swift */,
 				4DCC653CA52231F98F503D2A /* HotelCard.swift */,
 				D1F3011C8C200A72DF8BBDBC /* HotelImageCarousel.swift */,
 				E81992BA483821453807E654 /* StarRating.swift */,
@@ -427,10 +433,12 @@
 				EC6E9C2577E3375B7F992876 /* BrandedImagePlaceholder.swift in Sources */,
 				E2EE3DC787CFE84E5E6E527E /* CachedAsyncImage.swift in Sources */,
 				7EDECB5766CEED7926FB9562 /* CardPressStyle.swift in Sources */,
+				381597D4ACD40260834AD02F /* CompactHotelCard.swift in Sources */,
 				018038A0F1E79BF912F230CC /* Constants.swift in Sources */,
 				08A9019E91BDC0151C3E2DF6 /* Currency.swift in Sources */,
 				2215EBE716E6E30B02E89512 /* Decoders.swift in Sources */,
 				12191DDD98574CDF9BF7A252 /* Endpoints.swift in Sources */,
+				E21E4F72E79CE8F6D80987C4 /* FilterChipRow.swift in Sources */,
 				D3761BB7E2DD38F3B31769ED /* HTTPClient.swift in Sources */,
 				59FC9F4E052336AEAA049105 /* Hotel.swift in Sources */,
 				F4A465AE78971F9E35A0E76E /* HotelCard.swift in Sources */,

@@ -21,6 +21,114 @@ struct HotelListingsState: Equatable, Sendable {
     struct Loaded: Equatable, Sendable {
         var hotels: [Hotel]
         var currency: Currency
+        var activeFilter: Filter
+
+        /// Filtered + sectioned hotels. Drives the curated section layout
+        /// (Top picks, Within walking distance, etc.) instead of one flat list.
+        var sections: [Section] {
+            let base = hotels.filter(activeFilter.matches)
+            var result: [Section] = []
+
+            // Top picks: top-rated 5
+            let topRated = base.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }.prefix(5)
+            if !topRated.isEmpty {
+                result.append(Section(id: "top-picks", title: "Top picks",
+                                       subtitle: "Highest rated near you",
+                                       hotels: Array(topRated)))
+            }
+
+            // Within walking distance: distance ≤ 1.5 mi
+            let nearby = base.filter { ($0.distanceMiles ?? .infinity) <= 1.5 }
+            if !nearby.isEmpty {
+                result.append(Section(id: "walking",
+                                       title: "Within walking distance",
+                                       subtitle: nil,
+                                       hotels: nearby))
+            }
+
+            // Best value: cheapest 5
+            let bestValue = base.filter { $0.cheapestPrice != nil }
+                .sorted { ($0.cheapestPrice ?? .infinity) < ($1.cheapestPrice ?? .infinity) }
+                .prefix(5)
+            if !bestValue.isEmpty {
+                result.append(Section(id: "best-value", title: "Best value",
+                                       subtitle: "Lowest day passes today",
+                                       hotels: Array(bestValue)))
+            }
+
+            // All — falls back to flat list of remaining
+            let alreadyShown = Set(result.flatMap { $0.hotels.map(\.id) })
+            let remaining = base.filter { !alreadyShown.contains($0.id) }
+            if !remaining.isEmpty {
+                result.append(Section(id: "all", title: "All hotels",
+                                       subtitle: "\(remaining.count) more in \(activeFilter.displayName)",
+                                       hotels: remaining))
+            }
+            return result
+        }
+    }
+
+    struct Section: Equatable, Sendable, Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String?
+        let hotels: [Hotel]
+    }
+
+    enum Filter: String, CaseIterable, Sendable, Identifiable {
+        case all
+        case pool
+        case spa
+        case adults
+        case pets
+        case wellness
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .all:      return "All"
+            case .pool:     return "Pool"
+            case .spa:      return "Spa"
+            case .adults:   return "Adults Only"
+            case .pets:     return "Pet-Friendly"
+            case .wellness: return "Wellness"
+            }
+        }
+
+        var iconName: String {
+            switch self {
+            case .all:      return "square.grid.2x2"
+            case .pool:     return "figure.pool.swim"
+            case .spa:      return "sparkles"
+            case .adults:   return "person.2"
+            case .pets:     return "pawprint"
+            case .wellness: return "leaf"
+            }
+        }
+
+        /// Match against vibes/product/amenities. Heuristic — the API doesn't
+        /// expose canonical filter categories, so we sniff the strings.
+        func matches(_ hotel: Hotel) -> Bool {
+            switch self {
+            case .all: return true
+            case .pool:
+                return contains(hotel, terms: ["pool", "Pool"])
+            case .spa:
+                return contains(hotel, terms: ["spa", "Spa", "facial", "massage"])
+            case .adults:
+                return contains(hotel, terms: ["adult", "Adults"])
+            case .pets:
+                return contains(hotel, terms: ["pet", "Pet"])
+            case .wellness:
+                return contains(hotel, terms: ["wellness", "yoga", "fitness", "spa"])
+            }
+        }
+
+        private func contains(_ hotel: Hotel, terms: [String]) -> Bool {
+            let haystack = [hotel.productName, hotel.primaryVibe].compactMap { $0 }.joined(separator: " ")
+            return terms.contains { haystack.localizedCaseInsensitiveContains($0) }
+        }
     }
 }
 
@@ -30,6 +138,7 @@ enum HotelListingsIntent: Sendable {
     case appeared
     case retryTapped
     case backToSearchTapped
+    case filterChanged(HotelListingsState.Filter)
 }
 
 // MARK: - ViewModel
@@ -62,6 +171,11 @@ final class HotelListingsViewModel {
         case .backToSearchTapped:
             // Pop is handled by the View via dismiss environment.
             break
+        case .filterChanged(let filter):
+            if case .loaded(var loaded) = state.status {
+                loaded.activeFilter = filter
+                state.status = .loaded(loaded)
+            }
         }
     }
 
@@ -76,7 +190,11 @@ final class HotelListingsViewModel {
                 if response.hotels.isEmpty {
                     self.state.status = .empty
                 } else {
-                    self.state.status = .loaded(.init(hotels: response.hotels, currency: response.currency))
+                    self.state.status = .loaded(.init(
+                        hotels: response.hotels,
+                        currency: response.currency,
+                        activeFilter: .all
+                    ))
                 }
             } catch is CancellationError {
                 // silent
