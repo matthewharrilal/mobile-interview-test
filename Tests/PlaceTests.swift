@@ -106,6 +106,107 @@ final class PlaceTests: XCTestCase {
         XCTAssertTrue(places.isEmpty, "All malformed → empty array (not throw)")
     }
 
+    // MARK: - Adversarial Hotel decoding
+
+    func test_decode_hotelWithIdAsString_throwsDecodingError() throws {
+        // Hotel.id is non-optional Int. Per audit-A's documented decode
+        // trade-off, optional `decodeIfPresent` fields (hotelStar,
+        // cityName, etc) use `try?` so partial drift is silently nilled —
+        // but `id` is REQUIRED and must throw `DecodingError.typeMismatch`
+        // so the VM surfaces `.failed(decodeError)`.
+        let json = """
+        { "id": "not-an-int", "name": "X" }
+        """.data(using: .utf8)!
+        do {
+            _ = try Decoders.api.decode(Hotel.self, from: json)
+            XCTFail("Expected DecodingError.typeMismatch for id-as-string")
+        } catch is DecodingError {
+            // success — required field type mismatch surfaces the error path
+        } catch {
+            XCTFail("Expected DecodingError, got \(type(of: error)): \(error)")
+        }
+    }
+
+    func test_decode_hotelWithMissingName_throwsDecodingError() throws {
+        // Same: name is required. Missing it must throw.
+        let json = """
+        { "id": 1 }
+        """.data(using: .utf8)!
+        do {
+            _ = try Decoders.api.decode(Hotel.self, from: json)
+            XCTFail("Expected DecodingError.keyNotFound for missing name")
+        } catch is DecodingError {
+            // success
+        } catch {
+            XCTFail("Expected DecodingError, got \(error)")
+        }
+    }
+
+    func test_decode_hotelWithVibesAsNull_silentlyNilled() throws {
+        // vibes is decoded via `try?` per the documented trade-off — null
+        // is acceptable. The hotel decodes successfully with `primaryVibe = nil`.
+        let json = """
+        { "id": 1, "name": "Test Hotel", "vibes": null }
+        """.data(using: .utf8)!
+        let hotel = try Decoders.api.decode(Hotel.self, from: json)
+        XCTAssertEqual(hotel.id, 1)
+        XCTAssertEqual(hotel.name, "Test Hotel")
+        XCTAssertNil(hotel.primaryVibe, "Null vibes must decode to nil, not throw")
+    }
+
+    func test_decode_hotelWithHotelStarAsString_silentlyNilled() throws {
+        // hotelStar is decoded via `try?` per the documented trade-off.
+        // A type-mismatched value drops to nil rather than failing the whole
+        // hotel decode.
+        let json = """
+        { "id": 1, "name": "Test", "hotel_star": "four-stars" }
+        """.data(using: .utf8)!
+        let hotel = try Decoders.api.decode(Hotel.self, from: json)
+        XCTAssertEqual(hotel.id, 1)
+        XCTAssertNil(hotel.hotelStar, "String for hotel_star must decode to nil via try?")
+    }
+
+    func test_decode_hotelWithProductsAsObject_silentlyDropsProducts() throws {
+        // products is `[Product]?` decoded via `try?`. Schema drift where
+        // the API returns an object instead of an array must drop the
+        // products silently (rather than nuke the whole hotel).
+        let json = """
+        { "id": 1, "name": "Test", "products": { "id": 5, "price": 50.0 } }
+        """.data(using: .utf8)!
+        let hotel = try Decoders.api.decode(Hotel.self, from: json)
+        XCTAssertEqual(hotel.id, 1)
+        XCTAssertNil(hotel.cheapestPrice, "Object-shaped products silently dropped → no cheapestPrice")
+    }
+
+    func test_decode_hotelsArrayWithOneMalformedRow_keepsRest() throws {
+        // The HotelsClient response uses FailableDecodable<Hotel> on the
+        // hotels array — one malformed row should NOT drop the rest. Pin
+        // via direct wire decode using the same wire path the client uses.
+        let json = """
+        {
+          "hotels": [
+            { "id": 1, "name": "Valid Hotel" },
+            { "id": "bad", "name": "Bad Hotel" },
+            { "id": 3, "name": "Another Valid Hotel" }
+          ],
+          "currency": { "symbol": "$", "iso_code": "USD" },
+          "total": 3
+        }
+        """.data(using: .utf8)!
+        struct WireResponse: Decodable {
+            let hotels: [Hotel]
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                let wrapped = try container.decode([FailableDecodable<Hotel>].self, forKey: .hotels)
+                self.hotels = wrapped.compactMap(\.value)
+            }
+            enum CodingKeys: String, CodingKey { case hotels }
+        }
+        let response = try Decoders.api.decode(WireResponse.self, from: json)
+        XCTAssertEqual(response.hotels.count, 2, "One bad row drops; the other two survive")
+        XCTAssertEqual(response.hotels.map(\.id).sorted(), [1, 3])
+    }
+
     // MARK: - Display
 
     func test_displayRegion_city_combinesCityStateCountry() {
