@@ -140,7 +140,7 @@ private extension HotelListingsView {
             .padding(.horizontal, Theme.Spacing.m)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.m) {
+                HStack(spacing: Theme.Spacing.l) {   // wider gap so cards don't fuse at edges
                     ForEach(section.hotels) { hotel in
                         CompactHotelCard(
                             hotel: hotel,
@@ -158,18 +158,20 @@ private extension HotelListingsView {
                         // iOS 17 peek-carousel: cards at edges scale + fade.
                         .scrollTransition(.animated, axis: .horizontal) { content, phase in
                             content
-                                .scaleEffect(phase.isIdentity ? 1.0 : 0.94)
+                                .scaleEffect(phase.isIdentity ? 1.0 : 0.94, anchor: .center)
                                 .opacity(phase.isIdentity ? 1.0 : 0.7)
                         }
                     }
                 }
                 .scrollTargetLayout()
                 .padding(.horizontal, Theme.Spacing.m)
-                .padding(.bottom, Theme.Spacing.s)
+                .padding(.vertical, Theme.Spacing.s)   // breathing room above + below cards
             }
             .scrollTargetBehavior(.viewAligned)
+            .clipped()                                  // prevents card bleed into next section
         }
         .padding(.top, Theme.Spacing.l)
+        .padding(.bottom, Theme.Spacing.m)              // hard separator between sections
     }
 }
 

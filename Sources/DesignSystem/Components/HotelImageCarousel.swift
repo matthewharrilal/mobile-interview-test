@@ -16,8 +16,6 @@ struct HotelImageCarousel: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             imageContent
-                .aspectRatio(4/3, contentMode: .fill)
-                .clipped()
             gradientOverlay
             captionOverlay
             if urls.count > 1 {
@@ -27,7 +25,9 @@ struct HotelImageCarousel: View {
                     .frame(maxHeight: .infinity, alignment: .top)
             }
         }
+        .clipped()                                                   // chop image bleed before applying corner radius
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
+        .contentShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
         .accessibilityElement()
         .accessibilityLabel(Text(hotelName))
         .accessibilityAddTraits(.isImage)

@@ -25,7 +25,8 @@ struct CompactHotelCard: View {
                 hotelName: hotel.name,
                 hotelStar: hotel.hotelStar
             )
-            .frame(height: 200)
+            .frame(width: 220, height: 200)
+            .clipped()
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
             .shadow(
                 color: Theme.Elevation.cardCast.color.opacity(0.6),
@@ -75,8 +76,9 @@ struct CompactHotelCard: View {
                 }
             }
             .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 220)
+        .frame(width: 220, height: 340, alignment: .top)   // Uniform card height — locks layout against neighbors with longer/shorter taglines.
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Strings.Accessibility.hotelRowLabel(
             name: hotel.name,
