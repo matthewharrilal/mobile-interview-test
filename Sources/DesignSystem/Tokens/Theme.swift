@@ -113,11 +113,50 @@ enum Theme {
     // MARK: - Animation
 
     /// Named animation curves. Centralized so transitions stay consistent
-    /// across the app and tuning happens in one place.
+    /// across the app and tuning happens in one place. Names describe
+    /// INTENT (what is animating) not duration — duration is an
+    /// implementation detail that can be tuned in this file alone.
+    ///
+    /// Cohesion contract: every `withAnimation`, `.animation(...)`, and
+    /// `.transition(...)` modifier in `Sources/` MUST reference one of
+    /// these tokens. Inline curve literals (`.snappy(...)`, `.spring(...)`,
+    /// `.easeOut(...)`) are forbidden — they fragment the cadence and
+    /// defeat single-source-of-truth tuning.
     enum Animation {
         /// Card → detail morph spring. Near-critical (response 0.25, damping
         /// 0.95) gives a ~150ms geometry duration with no overshoot — the hero
         /// lands clean before the content fade-in beat starts in the detail.
         static let morphSpring = SwiftUI.Animation.spring(response: 0.25, dampingFraction: 0.95)
+
+        /// Content reveal inside the detail surface — fade-in coordinated
+        /// with the morph landing (`.delay(0.16)` is applied at the call
+        /// site so the beat lands ~160ms after mount). Linear-ease tail
+        /// keeps the type-bloom subtle next to the spring.
+        static let contentReveal = SwiftUI.Animation.easeOut(duration: 0.25)
+
+        /// Selection feedback for filter chips and reset buttons. Snappy
+        /// (no overshoot) so multiple rapid taps stay responsive without
+        /// stacking bounces.
+        static let selectionFeedback = SwiftUI.Animation.snappy(duration: 0.25)
+
+        /// Press-down feedback for tappable cards (`CardPressStyle`).
+        /// Tighter response and higher damping than morphSpring so the
+        /// release doesn't overshoot and compete with an in-flight morph.
+        static let pressFeedback = SwiftUI.Animation.spring(response: 0.20, dampingFraction: 0.92)
+
+        /// Surface mount/unmount crossfade — applied to status-state
+        /// transitions (loaded/empty/failed) and to `.transition(.opacity)`
+        /// curves so they don't run on SwiftUI's default 0.35s ease.
+        static let surfaceCrossfade = SwiftUI.Animation.easeInOut(duration: 0.20)
+
+        /// Quick polish fade — short cosmetic fades (image swaps, etc.).
+        /// Aligned with Kingfisher's fade duration so image-load reveals
+        /// match the rest of the animation cadence.
+        static let quickFade = SwiftUI.Animation.easeInOut(duration: 0.20)
+
+        /// Rubber-band snap-back for cancelled drag-dismiss gestures.
+        /// Heavier-damped interpolating spring — the user already saw the
+        /// movement, so no overshoot is needed on return.
+        static let snapBack = SwiftUI.Animation.interpolatingSpring(stiffness: 200, damping: 20)
     }
 }
