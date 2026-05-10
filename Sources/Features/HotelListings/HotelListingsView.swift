@@ -63,8 +63,14 @@ struct HotelListingsView: View {
     @ScaledMetric(relativeTo: .title) private var heroHeight: CGFloat = 360
 
     init(
+        // `.preview` (not `.live()`) is the right DEFAULT — production
+        // callers thread `.live(http:...)` explicitly through
+        // `RootNavigationView`, while previews and tests want fixture
+        // data with no network. Defaulting to `.live()` would silently
+        // hit staging from any unspecified call site (the worst kind
+        // of hidden dependency).
         place: Place,
-        client: HotelsClient = .live(),
+        client: HotelsClient = .preview,
         zoomNamespace: Namespace.ID? = nil,
         pushDetail: ((Hotel, String, Currency) -> Void)? = nil
     ) {
@@ -170,7 +176,15 @@ struct HotelListingsView: View {
         // fades on the same envelope as the geometry instead of UIKit's default
         // 0.3s easeInOut (cohesion-rendering-pipeline N-1 fix).
         .animation(Theme.Animation.morphSpring, value: viewModel.state.presentation)
-        .onAppear { viewModel.send(.appeared) }
+        // `.task` (vs `.onAppear`) gives us structured-concurrency for free:
+        // the closure inherits the view's lifetime and is automatically
+        // cancelled when the view leaves the hierarchy. The VM's
+        // `.appeared` reducer arm is idempotent on `.loaded` / `.loading`
+        // status (see HotelListings.swift §send.appeared), so re-firing
+        // on subsequent appearances is a no-op — but a quick swipe-back
+        // mid-fetch now cancels the in-flight Task cleanly instead of
+        // leaving it to write back into a deallocated view.
+        .task { viewModel.send(.appeared) }
         .onChange(of: scenePhase) { _, newPhase in
             // Refresh stale data on return to foreground. The VM gates on
             // `fetchedAt` so a quick app-switch (under threshold) is a
@@ -339,7 +353,7 @@ private extension HotelListingsView {
                     Image(systemName: "arrow.counterclockwise")
                     Text("Show all hotels")
                 }
-                .font(.system(size: 15, weight: .medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, Theme.Spacing.m + 2)
                 .padding(.vertical, Theme.Spacing.s + 2)
@@ -422,7 +436,7 @@ private extension HotelListingsView {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.state.location.name.uppercased())
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(.caption2, design: .rounded).weight(.semibold))
                         .tracking(1.4)
                         .foregroundStyle(.white.opacity(0.9))
                     Text(headerSummary(loaded: loaded))
