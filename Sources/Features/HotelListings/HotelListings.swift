@@ -221,7 +221,17 @@ final class HotelListingsViewModel {
     func send(_ intent: HotelListingsIntent) {
         switch intent {
         case .appeared:
-            startFetch()
+            // Idempotent on re-appearance: only fetch on first land or if a
+            // prior fetch failed. Without this guard, dismissing the detail
+            // re-fires `.onAppear` on the listings view, which would tear the
+            // loaded list back to .loading (skeleton flash) and re-network
+            // every time the user pops detail.
+            switch state.status {
+            case .loaded, .loading:
+                return
+            case .idle, .empty, .failed:
+                startFetch()
+            }
         case .retryTapped:
             startFetch()
         case .backToSearchTapped:
