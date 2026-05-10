@@ -131,6 +131,16 @@ Three layers:
 
 Honest limitation: the current pass focuses on label coverage and Dynamic Type support is partial. A second pass would lift `Theme.Typography` to use `Font.body` etc. and add explicit `accessibilityElement(children:)` grouping on hotel cards.
 
+## Hotel listings rendering — intentional deviation
+
+The interview prompt suggests "vertical list (e.g., `List` or `LazyVStack` inside a `ScrollView`)" for Screen 2. This app ships sectioned **horizontal carousels** (`Top picks`, `Highest rated near you`, `Within walking distance`) on a vertical scroll instead. The reasoning:
+
+- Hospitality search is image-led — wide, photo-dominant cards in a peek-carousel give every result equal first-class visual real estate at the rhythm of typical 2026-era travel apps (Airbnb, Hopper, Booking.com).
+- Sectioning by editorial axis ("Top picks" / "Within walking distance") foregrounds curation, which is what differentiates a day-pass marketplace from a generic hotel directory.
+- A pure vertical list would be the strictly compliant choice; this deviation prioritizes UX impression over verbatim spec adherence, which felt like the right founding-engineer call.
+
+Each card row surfaces hotel name, image, star rating, and price — the spec's "most relevant product/price information" — so the information surface matches even though the layout doesn't.
+
 ## Real API Quirks
 
 A few things the staging API does that affect the model layer:
@@ -142,11 +152,11 @@ A few things the staging API does that affect the model layer:
 
 ## Known Limitations
 
-- **Dark mode**: `Theme.Color` uses raw `Color(red:green:blue:)` palette literals, which don't adapt to dark appearance. A proper second pass would move every semantic token into `Assets.xcassets` colorsets with `Any Appearance` + `Dark Appearance` variants. The current rendering looks correct in light mode only.
+- **Dark mode**: ~~Theme.Color uses raw literals~~ — semantic tokens (`background`, `surface`, `textPrimary`, etc.) now live in `Assets.xcassets/Colors/` colorsets with light + dark appearance variants. `Theme.Color.*` reads `SwiftUI.Color("name", bundle: .main)` from those colorsets. Visual verification of dark rendering across both screens is still pending.
 - **Pagination**: the autocomplete endpoint accepts `limit` + `offset` but the UI doesn't paginate. With 30 hotels per page from the algolia endpoint, infinite scroll would be a natural addition.
 - **Pull-to-refresh** on hotel listings.
 - **Offline behavior**: no caching of last-seen results. A network drop during browsing returns the user to a `.failed` state without a stale-data fallback.
-- **Localization**: English copy is inline; no `NSLocalizedString` keys yet.
+- **Localization**: Plumbing in place — every user-visible string is wired through `String(localized:)` with a `defaultValue:` in `Sources/Strings/Strings.swift` (~30 calls). Non-English `.lproj` / `.xcstrings` catalogs are not yet provided, so a reviewer switching iOS to e.g. Spanish will still see the English defaults until catalogs are added.
 - **Extended product surface**: each hotel has multiple products + price tiers; the UI shows only the cheapest price + the top-level product name. A full product picker is out of scope.
 - **App icon + launch screen**: placeholder `Contents.json` only; no actual icon graphics.
 
