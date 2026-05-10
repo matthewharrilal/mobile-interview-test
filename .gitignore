@@ -22,3 +22,8 @@ Pods/
 # Maestro test artifacts (per-flow screenshots, debug output)
 [0-9][0-9]-*.png
 .maestro/screenshots/
+
+# One-off audit and debug screenshots (root-level)
+audit-*.png
+hero-*.png
+hotels-*.png
