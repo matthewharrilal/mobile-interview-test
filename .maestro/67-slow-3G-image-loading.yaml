@@ -12,6 +12,7 @@ tags:
 #   Settings.app → Developer → Network Link Conditioner.
 # CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle NLC. Capture is
 # screenshot-only; Maestro records the staggered fade-in over time.
+# See team-audit/artifacts/NLC-RUNBOOK.md for setup
 # Source spec: 04-combo-matrix.md §5.11 flow 67.
 - launchApp:
     clearState: true

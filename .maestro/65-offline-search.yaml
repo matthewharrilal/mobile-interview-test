@@ -11,6 +11,7 @@ tags:
 # Pre-config (manual): toggle simulator to airplane mode OR
 #   xcrun simctl status_bar <udid> override --dataNetwork none
 # CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle network state.
+# See team-audit/artifacts/NLC-RUNBOOK.md for setup
 # Source spec: 04-combo-matrix.md §5.11 flow 65.
 - launchApp:
     clearState: true

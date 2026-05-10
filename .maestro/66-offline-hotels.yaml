@@ -14,6 +14,7 @@ tags:
 # CANNOT BE FULLY AUTOMATED — Maestro 2.5.1 cannot toggle network mid-flow.
 # The runner must pause this flow at the SCREENSHOT 66-offline-hotels-pre-tap
 # step, toggle network, then resume.
+# See team-audit/artifacts/NLC-RUNBOOK.md for setup
 # Source spec: 04-combo-matrix.md §5.11 flow 66.
 - launchApp:
     clearState: true
