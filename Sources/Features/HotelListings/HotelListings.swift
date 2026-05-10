@@ -3,12 +3,29 @@
 // MVI: HotelListingsState + HotelListingsIntent + HotelListingsViewModel.
 
 import Foundation
+import CoreGraphics
 
 // MARK: - State
 
 struct HotelListingsState: Equatable, Sendable {
     var location: Place
     var status: Status
+
+    /// Which top-level layer is showing. Owned by the VM (not view-local @State)
+    /// so every transition flows through `send(_:)` and respects the MVI invariant.
+    var presentation: PresentationLayer = .browsing
+
+    /// 0 when detail is fully expanded, 1 when the dismiss-throw completes.
+    /// Read by the explore layer to drive its blur/dim ramp during dismiss.
+    /// Written via `.dragProgressChanged` (T-002 wires the DragGesture).
+    var dismissProgress: CGFloat = 0
+
+    /// Two discrete top-level layers. The base layer is always mounted;
+    /// the detail layer is conditional and hosts its own surface.
+    enum PresentationLayer: Equatable, Sendable {
+        case browsing
+        case detailExpanded(hotel: Hotel, sourceID: String)
+    }
 
     enum Status: Equatable, Sendable {
         case idle
@@ -139,6 +156,21 @@ enum HotelListingsIntent: Sendable {
     case retryTapped
     case backToSearchTapped
     case filterChanged(HotelListingsState.Filter)
+
+    /// Carousel card tapped — host calls this; reducer mutates
+    /// `state.presentation` to `.detailExpanded(hotel, sourceID)`.
+    /// The morph spring envelope is applied at the call site via
+    /// `withAnimation(Theme.Animation.morphSpring) { viewModel.send(...) }`.
+    case cardTapped(hotel: Hotel, sourceID: String)
+
+    /// User dismissed the detail surface (close button or drag-throw commit).
+    /// Reducer returns `state.presentation` to `.browsing` and resets
+    /// `dismissProgress` to 0.
+    case detailDismissed
+
+    /// Drag-progress update during the swipe-down dismiss (T-002 will write
+    /// this from the DragGesture). 0 = fully expanded, 1 = dismiss complete.
+    case dragProgressChanged(progress: CGFloat)
 }
 
 // MARK: - ViewModel
@@ -176,6 +208,13 @@ final class HotelListingsViewModel {
                 loaded.activeFilter = filter
                 state.status = .loaded(loaded)
             }
+        case .cardTapped(let hotel, let sourceID):
+            state.presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+        case .detailDismissed:
+            state.presentation = .browsing
+            state.dismissProgress = 0
+        case .dragProgressChanged(let progress):
+            state.dismissProgress = progress
         }
     }
 

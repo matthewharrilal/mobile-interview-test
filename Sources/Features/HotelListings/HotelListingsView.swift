@@ -23,12 +23,6 @@ struct HotelListingsView: View {
     @Namespace private var ns
 
     @State private var selectedFilter: HotelListingsState.Filter = .all
-    @State private var presentation: PresentationLayer = .browsing
-
-    /// 0 when detail is fully expanded, 1 when the dismiss-throw completes.
-    /// Worker C writes via the `HotelDetailScene` binding; the host reads it
-    /// to drive the explore layer's un-blur live as the detail clears.
-    @State private var dismissProgress: CGFloat = 0
 
     init(place: Place, client: HotelsClient = .live()) {
         _viewModel = State(initialValue: HotelListingsViewModel(
@@ -42,11 +36,15 @@ struct HotelListingsView: View {
         _viewModel = State(initialValue: viewModel)
     }
 
-    /// Two discrete top-level layers. The base layer is always mounted;
-    /// the detail layer is conditional and hosts its own surface.
-    enum PresentationLayer: Equatable {
-        case browsing
-        case detailExpanded(hotel: Hotel, sourceID: String)
+    /// Binding that surfaces `state.dismissProgress` to descendants (e.g.
+    /// `HotelDetailScene`) while routing every write through `send(_:)` so
+    /// the MVI invariant holds. T-002 will use this binding from the
+    /// DragGesture on the detail hero.
+    private var dismissProgressBinding: Binding<CGFloat> {
+        Binding(
+            get: { viewModel.state.dismissProgress },
+            set: { viewModel.send(.dragProgressChanged(progress: $0)) }
+        )
     }
 
     var body: some View {
@@ -54,7 +52,7 @@ struct HotelListingsView: View {
             exploreContent
                 .blur(radius: exploreBlurRadius)
                 .opacity(exploreOpacity)
-                .allowsHitTesting(presentation == .browsing)
+                .allowsHitTesting(viewModel.state.presentation == .browsing)
 
             // Detail surface — fills in matched-geometry + drag.
             // The matched-geometry hero inside HotelDetailScene carries the
@@ -63,18 +61,17 @@ struct HotelListingsView: View {
             // would double-animate the geometry). The spring envelope on the
             // state mutation governs the timing — see `withAnimation` calls
             // on the card tap and `onDismiss` below.
-            if case .detailExpanded(let hotel, let sourceID) = presentation,
+            if case .detailExpanded(let hotel, let sourceID) = viewModel.state.presentation,
                case .loaded(let loaded) = viewModel.state.status {
                 HotelDetailScene(
                     hotel: hotel,
                     currency: loaded.currency,
                     ns: ns,
                     sourceID: sourceID,
-                    dismissProgress: $dismissProgress,
+                    dismissProgress: dismissProgressBinding,
                     onDismiss: {
                         withAnimation(Theme.Animation.morphSpring) {
-                            presentation = .browsing
-                            dismissProgress = 0
+                            viewModel.send(.detailDismissed)
                         }
                     }
                 )
@@ -85,7 +82,7 @@ struct HotelListingsView: View {
         .navigationTitle(viewModel.state.location.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.thinMaterial, for: .navigationBar)
-        .toolbar(presentation == .browsing ? .visible : .hidden, for: .navigationBar)
+        .toolbar(viewModel.state.presentation == .browsing ? .visible : .hidden, for: .navigationBar)
         .onAppear { viewModel.send(.appeared) }
         .onChange(of: selectedFilter) { _, new in
             viewModel.send(.filterChanged(new))
@@ -95,15 +92,15 @@ struct HotelListingsView: View {
     /// Blur applied to the explore layer while detail is up. Ramps 0→24pt
     /// as `dismissProgress` clears (1 - progress).
     private var exploreBlurRadius: CGFloat {
-        guard case .detailExpanded = presentation else { return 0 }
-        return (1 - dismissProgress) * 24
+        guard case .detailExpanded = viewModel.state.presentation else { return 0 }
+        return (1 - viewModel.state.dismissProgress) * 24
     }
 
     /// Dim applied to the explore layer alongside the blur. Detail dims to
     /// 0.5 when fully expanded (progress=0) and clears to 1.0 as it dismisses.
     private var exploreOpacity: Double {
-        guard case .detailExpanded = presentation else { return 1.0 }
-        return 1.0 - (1.0 - Double(dismissProgress)) * 0.5
+        guard case .detailExpanded = viewModel.state.presentation else { return 1.0 }
+        return 1.0 - (1.0 - Double(viewModel.state.dismissProgress)) * 0.5
     }
 }
 
@@ -302,7 +299,7 @@ private extension HotelListingsView {
                             currency: currency,
                             onTap: {
                                 withAnimation(Theme.Animation.morphSpring) {
-                                    presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+                                    viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
                                 }
                             }
                         )
@@ -310,7 +307,7 @@ private extension HotelListingsView {
                         .contextMenu {
                             Button {
                                 withAnimation(Theme.Animation.morphSpring) {
-                                    presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+                                    viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
                                 }
                             } label: {
                                 Label("View details", systemImage: "info.circle")
