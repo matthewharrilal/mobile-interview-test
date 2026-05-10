@@ -27,6 +27,7 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UIApplicationSupportsMultipleScenes: "NO"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_UIAppFonts: "PlayfairDisplay.ttf,PlayfairDisplay-Italic.ttf"
   ResortPassTests:
     type: bundle.unit-test
     platform: iOS

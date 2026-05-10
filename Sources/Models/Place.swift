@@ -38,6 +38,33 @@ struct Place: Equatable, Sendable, Hashable, Identifiable, Codable {
         latitude != nil && longitude != nil
     }
 
+    /// SF Symbol name for the place type — drives the leading icon in search rows.
+    /// Keeps the icon vocabulary consistent and centralised so renames stay local.
+    var iconSymbolName: String {
+        switch type {
+        case "country":
+            return "globe.americas"
+        case "alias":
+            return "mappin.and.ellipse"
+        case "city":
+            return "building.2"
+        default:
+            return "mappin"
+        }
+    }
+
+    /// Short type label shown alongside place name in search rows.
+    var typeBadge: String {
+        switch type {
+        case "country": return "Country"
+        case "alias":   return "Nearby"
+        case "city":    return "City"
+        default:        return ""
+        }
+    }
+
+    var isAlias: Bool { type == "alias" }
+
     /// Displayed under the place name in the search row.
     /// Examples: "Jersey City · NJ, US", "Jamaica · Country", "Newport · RI, US".
     var displayRegion: String? {

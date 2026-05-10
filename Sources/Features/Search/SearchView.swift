@@ -1,5 +1,6 @@
 // SearchView.swift
 // SwiftUI view for the Search screen — search bar at top, content body per Status.
+// Place rows use type-aware icons (city / country / alias) for visual differentiation.
 
 import SwiftUI
 
@@ -53,6 +54,7 @@ private extension SearchView {
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
                 .accessibilityLabel(Strings.Accessibility.clearSearch)
+                .sensoryFeedback(.selection, trigger: viewModel.state.query.isEmpty)
             }
         }
         .padding(.horizontal, Theme.Spacing.m)
@@ -87,7 +89,7 @@ private extension SearchView {
                 .foregroundStyle(Theme.Color.textTertiary)
                 .accessibilityHidden(true)
             Text(Strings.Search.idleHeadline)
-                .font(Theme.Typography.titleM)
+                .font(Theme.Typography.editorialL)
                 .foregroundStyle(Theme.Color.textPrimary)
             Text(Strings.Search.idleSubtitle)
                 .font(Theme.Typography.body)
@@ -98,6 +100,7 @@ private extension SearchView {
         }
         .padding(.horizontal, Theme.Spacing.l)
         .accessibilityElement(children: .combine)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
     var loadingState: some View {
@@ -113,15 +116,21 @@ private extension SearchView {
     }
 
     var skeletonRow: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+        HStack(spacing: Theme.Spacing.m) {
+            Circle()
                 .fill(Theme.Color.surfaceRecessed)
-                .frame(height: 18)
-                .frame(maxWidth: 220)
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
-                .fill(Theme.Color.surfaceRecessed)
-                .frame(height: 14)
-                .frame(maxWidth: 140)
+                .frame(width: 28, height: 28)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                    .fill(Theme.Color.surfaceRecessed)
+                    .frame(height: 18)
+                    .frame(maxWidth: 220)
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                    .fill(Theme.Color.surfaceRecessed)
+                    .frame(height: 14)
+                    .frame(maxWidth: 140)
+            }
+            Spacer()
         }
         .padding(Theme.Spacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,49 +140,59 @@ private extension SearchView {
 
     func loadedState(_ places: [Place]) -> some View {
         ScrollView {
-            LazyVStack(spacing: Theme.Spacing.s) {
-                ForEach(places) { place in
+            LazyVStack(spacing: 0) {
+                ForEach(Array(places.enumerated()), id: \.element.id) { index, place in
                     Button { viewModel.send(.placeSelected(place)) } label: {
                         placeRow(place)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.cardPress)
                     .accessibilityHint(Text(String(format: Strings.Accessibility.placeRowHintFormat, place.name)))
+                    if index < places.count - 1 {
+                        Divider()
+                            .background(Theme.Color.border)
+                            .padding(.leading, 64)
+                    }
                 }
             }
             .padding(.horizontal, Theme.Spacing.m)
-            .padding(.vertical, Theme.Spacing.s)
+            .padding(.vertical, Theme.Spacing.xs)
         }
+        .transition(.opacity)
     }
 
     func placeRow(_ place: Place) -> some View {
         HStack(spacing: Theme.Spacing.m) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            // Type-aware icon — outlined SF Symbol for editorial restraint
+            Image(systemName: place.iconSymbolName)
+                .font(.system(size: 18, weight: .light))
+                .foregroundStyle(place.isAlias ? Theme.Color.textTertiary : Theme.Color.accent)
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle()
+                        .fill(place.isAlias ? Theme.Color.surfaceRecessed : Theme.Color.accent.opacity(0.08))
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(place.name)
-                    .font(Theme.Typography.titleS)
-                    .foregroundStyle(Theme.Color.textPrimary)
+                    .font(.system(.body, design: .serif).weight(place.isAlias ? .regular : .medium))
+                    .foregroundStyle(place.isAlias ? Theme.Color.textSecondary : Theme.Color.textPrimary)
                     .multilineTextAlignment(.leading)
-                if let region = place.displayRegion {
-                    Label(region, systemImage: Theme.Icon.mapPin)
-                        .font(Theme.Typography.footnote)
-                        .foregroundStyle(Theme.Color.textSecondary)
-                        .labelStyle(.titleAndIcon)
-                }
+                    .lineLimit(2)
+                Text(place.typeBadge.uppercased())
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .tracking(0.8)
+                    .foregroundStyle(Theme.Color.textTertiary)
             }
-            Spacer()
+            Spacer(minLength: Theme.Spacing.s)
             Image(systemName: Theme.Icon.chevronRight)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.Color.textTertiary)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Theme.Color.textTertiary.opacity(0.6))
                 .accessibilityHidden(true)
         }
-        .padding(Theme.Spacing.m)
-        .background(Theme.Color.surface)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
-        .shadow(
-            color: Theme.Elevation.card.color,
-            radius: Theme.Elevation.card.radius,
-            x: Theme.Elevation.card.x,
-            y: Theme.Elevation.card.y
-        )
+        .padding(.horizontal, Theme.Spacing.s)
+        .padding(.vertical, Theme.Spacing.m)
+        .contentShape(Rectangle())
     }
 
     var emptyState: some View {
@@ -182,6 +201,7 @@ private extension SearchView {
             systemImage: Theme.Icon.search,
             description: Text(String(format: Strings.Search.emptyDescriptionFormat, viewModel.state.query))
         )
+        .transition(.opacity)
     }
 
     func failedState(_ message: String) -> some View {
@@ -195,6 +215,7 @@ private extension SearchView {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
+        .transition(.opacity)
     }
 }
 

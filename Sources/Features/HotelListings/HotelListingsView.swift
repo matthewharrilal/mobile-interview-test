@@ -1,5 +1,6 @@
 // HotelListingsView.swift
-// SwiftUI view for the HotelListings screen — list of hotel cards per Status.
+// SwiftUI view for the HotelListings screen — editorial hotel cards with
+// large hero carousel, gradient name overlay, refined serif typography.
 
 import SwiftUI
 
@@ -46,7 +47,7 @@ struct HotelListingsView: View {
 private extension HotelListingsView {
     var loadingState: some View {
         ScrollView {
-            LazyVStack(spacing: Theme.Spacing.m) {
+            LazyVStack(spacing: Theme.Spacing.l) {
                 ForEach(0..<3, id: \.self) { _ in
                     skeletonCard
                 }
@@ -58,120 +59,44 @@ private extension HotelListingsView {
     }
 
     var skeletonCard: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             Rectangle()
                 .fill(Theme.Color.surfaceRecessed)
-                .aspectRatio(16/10, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.m))
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
-                .fill(Theme.Color.surfaceRecessed)
-                .frame(height: 18)
-                .frame(maxWidth: 220)
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
-                .fill(Theme.Color.surfaceRecessed)
-                .frame(height: 14)
-                .frame(maxWidth: 140)
+                .aspectRatio(4/3, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                    .fill(Theme.Color.surfaceRecessed)
+                    .frame(height: 14)
+                    .frame(maxWidth: 160)
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.s)
+                    .fill(Theme.Color.surfaceRecessed)
+                    .frame(height: 12)
+                    .frame(maxWidth: 100)
+            }
+            .padding(.horizontal, Theme.Spacing.s)
+            .padding(.bottom, Theme.Spacing.s)
         }
-        .padding(Theme.Spacing.m)
         .background(Theme.Color.surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
+                .stroke(Theme.Color.border, lineWidth: 0.5)
+        )
     }
 
     func loadedState(_ loaded: HotelListingsState.Loaded) -> some View {
         ScrollView {
-            LazyVStack(spacing: Theme.Spacing.m) {
+            LazyVStack(spacing: Theme.Spacing.l) {
                 ForEach(loaded.hotels) { hotel in
-                    hotelCard(hotel, currency: loaded.currency)
+                    HotelCard(hotel: hotel, currency: loaded.currency, onTap: nil)
                 }
             }
             .padding(.horizontal, Theme.Spacing.m)
             .padding(.vertical, Theme.Spacing.s)
         }
         .refreshable { viewModel.send(.retryTapped) }
-    }
-
-    func hotelCard(_ hotel: Hotel, currency: Currency) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            CachedAsyncImage(url: hotel.imageURL)
-                .aspectRatio(16/10, contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.m))
-                .accessibilityHidden(true)
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                    Text(hotel.name)
-                        .font(Theme.Typography.titleS)
-                        .foregroundStyle(Theme.Color.textPrimary)
-                        .lineLimit(2)
-                    HStack(spacing: Theme.Spacing.xs) {
-                        if let text = hotel.distanceText, !text.isEmpty {
-                            Label(text, systemImage: Theme.Icon.mapPin)
-                                .labelStyle(.titleAndIcon)
-                        } else if let distance = hotel.distanceMiles {
-                            Label("\(Int(distance)) mi", systemImage: Theme.Icon.mapPin)
-                                .labelStyle(.titleAndIcon)
-                        }
-                        if let vibe = hotel.primaryVibe {
-                            Text("·")
-                            Label(vibe, systemImage: Theme.Icon.vibe)
-                                .labelStyle(.titleAndIcon)
-                        }
-                    }
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Color.textSecondary)
-                }
-                Spacer()
-                if let rating = hotel.rating, rating > 0 {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Label(String(format: "%.1f", rating), systemImage: Theme.Icon.star)
-                            .labelStyle(.titleAndIcon)
-                            .font(Theme.Typography.bodyEmphasised)
-                            .foregroundStyle(Theme.Color.textPrimary)
-                        if hotel.reviewCount > 0 {
-                            Text("(\(hotel.reviewCount))")
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(Theme.Color.textSecondary)
-                        }
-                    }
-                }
-            }
-
-            HStack {
-                if let productName = hotel.productName {
-                    Text(productName)
-                        .font(Theme.Typography.body)
-                        .foregroundStyle(Theme.Color.textSecondary)
-                }
-                Spacer()
-                if let price = hotel.cheapestPrice {
-                    Text(formattedPrice(price, currency: currency))
-                        .font(Theme.Typography.titleS)
-                        .foregroundStyle(Theme.Color.accent)
-                }
-            }
-            .padding(.top, Theme.Spacing.xs)
-        }
-        .padding(Theme.Spacing.m)
-        .background(Theme.Color.surface)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
-        .shadow(
-            color: Theme.Elevation.card.color,
-            radius: Theme.Elevation.card.radius,
-            x: Theme.Elevation.card.x,
-            y: Theme.Elevation.card.y
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Strings.Accessibility.hotelRowLabel(
-            name: hotel.name,
-            rating: hotel.rating,
-            distance: hotel.distanceText ?? hotel.distanceMiles.map { "\(Int($0)) miles" },
-            price: hotel.cheapestPrice.map { "\(currency.symbol)\(Int($0))" }
-        ))
-    }
-
-    func formattedPrice(_ price: Double, currency: Currency) -> String {
-        "\(currency.symbol)\(Int(price))"
+        .transition(.opacity)
     }
 
     var emptyState: some View {
@@ -184,6 +109,7 @@ private extension HotelListingsView {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
+        .transition(.opacity)
     }
 
     func failedState(_ message: String) -> some View {
@@ -197,21 +123,19 @@ private extension HotelListingsView {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
+        .transition(.opacity)
     }
 }
 
 // MARK: - Accessibility
 
-#Preview("Loading — Light") {
+#Preview("Loaded — Light") {
     NavigationStack {
         HotelListingsView(viewModel: HotelListingsViewModel(
             location: Place(placeID: 1, objectID: "Newport", name: "Newport Beach, California",
                             type: "city", cityName: "Newport Beach", stateCode: "CA", countryCode: "US",
                             latitude: 33.6, longitude: -117.9),
-            client: HotelsClient { _ in
-                try await Task.sleep(for: .seconds(60))
-                return HotelsSearchResponse(hotels: [], currency: .usd, total: 0)
-            }
+            client: .preview
         ))
     }
 }

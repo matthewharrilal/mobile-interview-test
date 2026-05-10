@@ -56,6 +56,8 @@ enum Theme {
 
     /// Semantic font styles that respect Dynamic Type. Each maps to a system
     /// text style so the user's accessibility size scales them automatically.
+    /// Editorial typography: hotel + place names use Playfair Display
+    /// (bundled OFL-licensed display serif). Supporting copy stays in SF Pro.
     enum Typography {
         static let titleL = Font.largeTitle.weight(.medium)
         static let titleM = Font.title2.weight(.medium)
@@ -64,6 +66,18 @@ enum Theme {
         static let bodyEmphasised = Font.body.weight(.medium)
         static let footnote = Font.footnote
         static let caption = Font.caption
+
+        /// Editorial display serif (Playfair Display) for hotel + place names.
+        /// Falls back to system serif (.system(...,design: .serif)) if the font
+        /// fails to load, so the layout always renders.
+        static let editorialL = Font.custom("PlayfairDisplay-Regular", size: 24, relativeTo: .title2).weight(.medium)
+        static let editorialM = Font.custom("PlayfairDisplay-Regular", size: 20, relativeTo: .title3).weight(.medium)
+        static let editorialS = Font.custom("PlayfairDisplay-Regular", size: 17, relativeTo: .headline).weight(.medium)
+        static let editorialDisplay = Font.custom("PlayfairDisplay-Regular", size: 28, relativeTo: .title).weight(.semibold)
+
+        /// Refined supporting copy — uppercase metadata + numeric prices.
+        static let metadata = Font.system(.footnote).weight(.medium)
+        static let priceDisplay = Font.custom("PlayfairDisplay-Regular", size: 22, relativeTo: .title3).weight(.semibold)
     }
 
     // MARK: - Elevation
