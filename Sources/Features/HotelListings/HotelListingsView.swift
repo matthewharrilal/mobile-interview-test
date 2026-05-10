@@ -66,8 +66,12 @@ private extension HotelListingsView {
                     .padding(.bottom, Theme.Spacing.m)
                 FilterChipRow(filters: HotelListingsState.Filter.allCases, selected: $selectedFilter)
                     .padding(.bottom, Theme.Spacing.s)
-                ForEach(loaded.sections) { section in
-                    sectionView(section, currency: loaded.currency)
+                if loaded.sections.isEmpty {
+                    emptyFilterState(activeFilter: loaded.activeFilter)
+                } else {
+                    ForEach(loaded.sections) { section in
+                        sectionView(section, currency: loaded.currency)
+                    }
                 }
                 Spacer().frame(height: Theme.Spacing.xl)
             }
@@ -75,24 +79,88 @@ private extension HotelListingsView {
         .coordinateSpace(name: "scroll")
         .refreshable { viewModel.send(.retryTapped) }
         .transition(.opacity)
+        .ignoresSafeArea(edges: .top)         // hero bleeds behind the nav bar
+    }
+
+    /// Shown inside the loaded state when the active filter yields zero
+    /// matches — keeps the header + chip strip visible so the user can
+    /// pivot without leaving the screen.
+    func emptyFilterState(activeFilter: HotelListingsState.Filter) -> some View {
+        VStack(spacing: Theme.Spacing.m) {
+            Image(systemName: activeFilter.iconName)
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(Theme.Color.textTertiary)
+                .padding(.top, Theme.Spacing.xl)
+            Text("No \(activeFilter.displayName.lowercased()) hotels here")
+                .font(Theme.Typography.editorialM)
+                .foregroundStyle(Theme.Color.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("None of the day passes in \(viewModel.state.location.name) match this filter. Try a different one or browse all hotels.")
+                .font(Theme.Typography.body)
+                .foregroundStyle(Theme.Color.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Theme.Spacing.l)
+            Button {
+                withAnimation(.snappy(duration: 0.25)) {
+                    selectedFilter = .all
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Show all hotels")
+                }
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, Theme.Spacing.m + 2)
+                .padding(.vertical, Theme.Spacing.s + 2)
+                .background(
+                    Capsule().fill(Theme.Color.accent)
+                )
+            }
+            .padding(.top, Theme.Spacing.s)
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.bottom, Theme.Spacing.xl)
+        .frame(maxWidth: .infinity)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+        .accessibilityElement(children: .combine)
     }
 
     func parallaxHeader(loaded: HotelListingsState.Loaded) -> some View {
         let firstURL = loaded.hotels.first?.imageURL
         return GeometryReader { proxy in
             let offset = proxy.frame(in: .named("scroll")).minY
-            let stretch = max(0, offset)
+            let stretch = max(0, offset)               // pull-down stretch
+            let parallax = max(0, -offset / 3)         // upward pan as page scrolls
             ZStack(alignment: .bottomLeading) {
                 CachedAsyncImage(url: firstURL)
                     .scaledToFill()
-                    .frame(width: proxy.size.width, height: 280 + stretch)
-                    .offset(y: -stretch)
+                    .frame(width: proxy.size.width, height: 360 + stretch)
+                    .offset(y: -stretch / 2 - parallax)
+                    .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
                     .clipped()
 
+                // Top scrim — fades the image into the translucent nav bar
+                // so there's no hard top edge against the chrome.
                 LinearGradient(
-                    colors: [Color.black.opacity(0.65), Color.black.opacity(0.0), Color.black.opacity(0.0)],
-                    startPoint: .bottom,
-                    endPoint: .top
+                    colors: [
+                        Color.black.opacity(0.45),
+                        Color.black.opacity(0.10),
+                        Color.black.opacity(0.0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+
+                // Bottom scrim — for legibility of the white text overlay
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.0),
+                        Color.black.opacity(0.0),
+                        Color.black.opacity(0.65)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -107,8 +175,10 @@ private extension HotelListingsView {
                 .padding(Theme.Spacing.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(width: proxy.size.width, height: 360)   // taller than before to absorb safe-area extension
+            .clipped()
         }
-        .frame(height: 280)
+        .frame(height: 360)
     }
 
     func headerSummary(loaded: HotelListingsState.Loaded) -> String {
@@ -165,13 +235,12 @@ private extension HotelListingsView {
                 }
                 .scrollTargetLayout()
                 .padding(.horizontal, Theme.Spacing.m)
-                .padding(.vertical, Theme.Spacing.s)   // breathing room above + below cards
+                .padding(.top, Theme.Spacing.s)
             }
             .scrollTargetBehavior(.viewAligned)
             .clipped()                                  // prevents card bleed into next section
         }
-        .padding(.top, Theme.Spacing.l)
-        .padding(.bottom, Theme.Spacing.m)              // hard separator between sections
+        .padding(.top, Theme.Spacing.m)                 // tighter section rhythm (was .l = 24, now .m = 16)
     }
 }
 

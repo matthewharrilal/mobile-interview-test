@@ -43,12 +43,12 @@ struct CompactHotelCard: View {
                         .tracking(1.4)
                         .foregroundStyle(Theme.Color.textTertiary)
                 }
-                // Editorial sentence — italic serif, single line in the
-                // luxury-hospitality voice
+                // Editorial sentence — italic serif. Reserve 2 lines so cards
+                // with shorter taglines don't shrink and break the row's vertical rhythm.
                 Text(hotel.editorialTagline)
                     .font(.system(.subheadline, design: .serif).italic())
                     .foregroundStyle(Theme.Color.textPrimary)
-                    .lineLimit(2)
+                    .lineLimit(2, reservesSpace: true)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -78,7 +78,7 @@ struct CompactHotelCard: View {
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 220, height: 340, alignment: .top)   // Uniform card height — locks layout against neighbors with longer/shorter taglines.
+        .frame(width: 220, alignment: .top)   // Width pinned; height now driven by .lineLimit(reservesSpace) so all cards align.
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Strings.Accessibility.hotelRowLabel(
             name: hotel.name,
