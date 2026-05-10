@@ -23,7 +23,14 @@ struct HotelDetailScene: View {
     let ns: Namespace.ID
     let sourceID: String
     @Binding var dismissProgress: CGFloat
-    var onDismiss: () -> Void
+    /// Invoked when the user commits the dismiss gesture. The CGFloat is
+    /// the throw velocity along the drag axis in pt/sec, computed from the
+    /// gesture's `predictedEndTranslation` over SwiftUI's ~0.1s prediction
+    /// window. The host uses this to scale the morph spring's response so
+    /// a fast flick dismisses faster than a slow drag — closes the velocity
+    /// discontinuity at the gesture release boundary
+    /// (cohesion-animation-system B-3 fix).
+    var onDismiss: (CGFloat) -> Void
 
     /// 0 while the matched-geometry hero is still morphing from the card,
     /// 1 once the surrounding content has faded in. Driven by a `.task`
@@ -45,28 +52,34 @@ struct HotelDetailScene: View {
     private static let dismissProgressDistance: CGFloat = 600
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        // Cap opacity at 0.999 to stay within the layer-promoted regime —
+        // crossing exactly 1.0 makes SwiftUI un-promote the layer on the
+        // final frame, producing a visible "snap" on every morph settle
+        // (cohesion-rendering-pipeline F-1 fix).
+        let safeOpacity = min(contentOpacity, 0.999)
+        return ZStack(alignment: .topLeading) {
             // Detail surface — fades in BEHIND the morphing hero so the
             // hero stays continuously visible while the surface arrives.
             Theme.Color.background
                 .ignoresSafeArea()
-                .opacity(contentOpacity)
+                .opacity(safeOpacity)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     hero
                     content
-                        .opacity(contentOpacity)
+                        .opacity(safeOpacity)
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
             .scrollIndicators(.hidden)
+            .ignoresSafeArea(edges: .top)
 
             // Close affordance — temporary chevron until Worker C wires the
             // gesture-driven dismiss. Stays useful as a fallback for users who
             // can't perform a swipe.
             closeButton
-                .opacity(contentOpacity)
+                .opacity(safeOpacity)
         }
         .onAppear {
             // Geometry settles ~150ms (spring response 0.25, damping 0.95);
@@ -93,21 +106,41 @@ private extension HotelDetailScene {
     /// `isSource:` so the pair has exactly one source — avoids undefined
     /// dual-source behavior.
     ///
-    /// Modifier order matters: `.matchedGeometryEffect` must be applied
-    /// BEFORE `.shadow` so the shadow sits OUTSIDE the matched frame and
-    /// doesn't interpolate with it (preventing halo blooms mid-morph).
+    /// Sibling-layer shadow pattern (cohesion-rendering-pipeline F + H fix):
+    /// the radius-24 shadow is hosted by an INVISIBLE carrier RoundedRectangle
+    /// in a sibling layer rather than as a `.shadow(...)` modifier on the
+    /// morphing hero itself. That isolates the shadow's promoted backing
+    /// store from the morphing frame so the Gaussian blur target is not
+    /// re-rasterized on every frame as the hero grows ~4× across 250 ms.
+    /// The carrier shares the hero's matched-geometry id with the
+    /// ".shadow" suffix to keep its frame in sync without a corresponding
+    /// source on the card (the source-card carries no shadow at this id;
+    /// the carrier fades in via `contentOpacity` so it doesn't ghost-jump).
     ///
     /// Worker C wires the `DragGesture` here for the swipe-down dismiss
     /// (gesture must NOT be on the whole scene — would eat ScrollView pan).
     var hero: some View {
-        HotelImageCarousel(
-            urls: hotel.imageURLs,
-            hotelName: hotel.name,
-            hotelStar: hotel.hotelStar
-        )
-        .frame(height: 360)
-        .matchedGeometryEffect(id: sourceID, in: ns)
-        .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+        ZStack {
+            // Shadow sibling — stable layer-promoted backing store, frame
+            // synced via matched-geometry id derived from sourceID. Uses
+            // a near-zero opacity carrier so the shadow has a substrate
+            // to render against without painting any visible fill.
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
+                .fill(Color.black.opacity(0.001))
+                .frame(height: 360)
+                .matchedGeometryEffect(id: "\(sourceID).shadow", in: ns)
+                .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+                .opacity(min(contentOpacity, 0.999))
+
+            // Hero image — no shadow; pure matched-geometry frame morph.
+            HotelImageCarousel(
+                urls: hotel.imageURLs,
+                hotelName: hotel.name,
+                hotelStar: hotel.hotelStar
+            )
+            .frame(height: 360)
+            .matchedGeometryEffect(id: sourceID, in: ns)
+        }
         .offset(y: rubberBandedOffset(for: dragTranslation))
         .gesture(dismissDrag)
     }
@@ -136,9 +169,17 @@ private extension HotelDetailScene {
             .onEnded { value in
                 let downward = max(0, value.translation.height)
                 if downward >= Self.dismissCommitAt {
+                    // Pass throw velocity (pt/sec along drag axis) to the host
+                    // so it can scale the morph-spring envelope proportionally
+                    // — eliminates the visible "stick" at gesture release that
+                    // happens when the dismiss spring starts from rest.
+                    // SwiftUI's predictedEndTranslation projects ~0.1s ahead;
+                    // (predicted - actual) / 0.1 ≈ instantaneous velocity.
+                    let predicted = max(0, value.predictedEndTranslation.height)
+                    let throwVelocity = max(0, (predicted - downward) / 0.1)
                     // Host owns the morph-spring envelope on `onDismiss`;
-                    // we just fire the callback and let it run.
-                    onDismiss()
+                    // we just fire the callback with the velocity and let it run.
+                    onDismiss(throwVelocity)
                 } else {
                     // Rubber-band snap-back — both <100pt and 100–200pt
                     // bands cancel. Spring back to rest.
@@ -209,7 +250,9 @@ private extension HotelDetailScene {
     }
 
     var closeButton: some View {
-        Button(action: onDismiss) {
+        // Tap-driven dismiss carries no throw velocity — host receives 0
+        // and uses its baseline morph-spring envelope.
+        Button(action: { onDismiss(0) }) {
             Image(systemName: "chevron.down")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Theme.Color.textPrimary)
@@ -254,7 +297,7 @@ private struct HotelDetailScenePreviewWrapper: View {
             ns: ns,
             sourceID: "preview-source",
             dismissProgress: $dismissProgress,
-            onDismiss: {}
+            onDismiss: { _ in }
         )
     }
 }

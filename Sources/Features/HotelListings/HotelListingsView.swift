@@ -76,8 +76,14 @@ struct HotelListingsView: View {
                     ns: ns,
                     sourceID: sourceID,
                     dismissProgress: dismissProgressBinding,
-                    onDismiss: {
-                        withAnimation(Theme.Animation.morphSpring) {
+                    onDismiss: { throwVelocity in
+                        // Scale morph spring response by throw vigor so a
+                        // fast flick dismisses faster than a slow drag —
+                        // closest declarative approximation of velocity
+                        // injection (cohesion-animation-system B-3 fix).
+                        // > 800 pt/s = clearly thrown → 1.4× speed.
+                        let speed: Double = throwVelocity > 800 ? 1.4 : 1.0
+                        withAnimation(Theme.Animation.morphSpring.speed(speed)) {
                             viewModel.send(.detailDismissed)
                         }
                     }
@@ -97,9 +103,15 @@ struct HotelListingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.thinMaterial, for: .navigationBar)
         .toolbar(viewModel.state.presentation == .browsing ? .visible : .hidden, for: .navigationBar)
+        // Bind the toolbar visibility transition to the morph spring so chrome
+        // fades on the same envelope as the geometry instead of UIKit's default
+        // 0.3s easeInOut (cohesion-rendering-pipeline N-1 fix).
+        .animation(Theme.Animation.morphSpring, value: viewModel.state.presentation)
         .onAppear { viewModel.send(.appeared) }
         .onChange(of: selectedFilter) { _, new in
-            viewModel.send(.filterChanged(new))
+            withAnimation(Theme.Animation.selectionFeedback) {
+                viewModel.send(.filterChanged(new))
+            }
         }
     }
 
@@ -345,10 +357,16 @@ private extension HotelListingsView {
                             HotelDetailPreview(hotel: hotel, currency: currency)
                         }
                         // iOS 17 peek-carousel: cards at edges scale + fade.
+                        // Suppressed during morph (presentation != .browsing)
+                        // so the matched-geometry source view starts the morph
+                        // from identity rather than mid-scrollTransition scale,
+                        // eliminating non-identity source frames during the
+                        // 250ms morph window (cohesion-animation-system A+L fix).
                         .scrollTransition(.animated, axis: .horizontal) { content, phase in
-                            content
-                                .scaleEffect(phase.isIdentity ? 1.0 : 0.94, anchor: .center)
-                                .opacity(phase.isIdentity ? 1.0 : 0.7)
+                            let suppress = viewModel.state.presentation != .browsing
+                            return content
+                                .scaleEffect(suppress || phase.isIdentity ? 1.0 : 0.94, anchor: .center)
+                                .opacity(suppress || phase.isIdentity ? 1.0 : 0.7)
                         }
                     }
                 }
