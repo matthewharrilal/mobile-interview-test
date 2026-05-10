@@ -112,3 +112,23 @@ Append-only running log of every audit firing per the cadence rule in `12-contin
 **D3 conclusion:** Two major findings warrant remediation: (1) `HotelListingsView.swift` exceeded the 400-LOC threshold with extractable leaf types still co-located, and (2) `presentation: PresentationLayer` is undocumented commit-state in `@State` that contradicts the build brief's MVI invariant. Anti-patterns clean, code smells mostly clean, complexity flags trace to pre-existing view-builders. Architect's senior judgment is otherwise solid — the contracts are explicit, the boundaries are defensible, and the deviations that exist are reasoned. Both remediations are tractable.
 
 ---
+
+## 2026-05-10 — audit firing (D4 PENDING)
+
+**Triggered by:** architect commit `87c490a` (Scaffold transition shell: ZStack composition, detail scene, search overlay)
+**Commit:** 87c490a
+**Target:** Sources/Features/HotelDetail/HotelDetailScene.swift, Sources/Features/Search/SearchActiveOverlay.swift, Sources/Features/HotelListings/HotelListingsView.swift (architect's portion)
+**Dimensions audited:** D4 (system-as-a-whole) — **NOT YET FIRED**
+**Status:** PENDING — see TODO below.
+
+**TODO (D4 firing):** D1, D2, and D3 audit firings above were dispatched against commit `87c490a`, but D4 (system-as-a-whole) was never fired against the same commit. Per `ux-research/team/12-continuous-audit.json` § `dimensions.D4_system_as_a_whole`, D4 covers regression risk, cross-criterion consistency, integration smells, and holistic flow — the last of which requires executing `.maestro/13-transitions-audit.yaml` (or equivalent) end-to-end and an auditor agent reviewing the flow log + screenshots for jank, missed frames, layout shifts, or visual deviation from the Airbnb reference. That holistic-flow execution belongs to Phase 6 (full holistic test) and has not been run.
+
+This missing entry is tracked as finding **F-014** in `team-audit/MASTER-AUDIT.json` and remediation task **T-013** ("Run D4 audit firing OR remove the reference"). The acceptance criterion is satisfied by *either* (a) firing D4 against current HEAD and appending the findings here, *or* (b) removing the D4 reference from `12-continuous-audit.json`. This entry takes the documentation path: the gap is logged so the continuous-audit pipeline state is no longer silently incomplete. Actual D4 firing is deferred to the Phase 6 holistic pass.
+
+**Mechanical results:** not run.
+**Judgment results:** not run.
+**Remediation tasks filed:** none (deferred — see T-013).
+
+**D4 conclusion:** PENDING. No D4 findings have been produced for commit `87c490a`. The audit log now reflects this gap explicitly rather than implying D4 passed silently. When D4 is fired (Phase 6 or earlier), this entry should be superseded by a regular D4 firing entry following the D1/D2/D3 format above.
+
+---
