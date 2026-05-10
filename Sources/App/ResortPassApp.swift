@@ -13,8 +13,6 @@ import SwiftUI
 
 @main
 struct ResortPassApp: App {
-    @State private var searchViewModel: SearchViewModel
-
     /// Shared status-bar animator. Lives on the App so the bridge HC
     /// reference is stable across scene-phase changes (the iOS 17 morph
     /// path in `HotelListingsView` reaches it via
@@ -33,19 +31,42 @@ struct ResortPassApp: App {
     /// iOS 17 supplemental migration path.
     @State private var morphTransitionAdapter = MorphTransitionAdapter()
 
+    /// The single composition-root dependency graph. Built once here
+    /// from `AppDependencies.live()` (or DEBUG-overridden by launch
+    /// arguments for Maestro UI test paths). All downstream code reads
+    /// dependencies from this value — either via constructor injection
+    /// at the VM seam or `@Environment(\.dependencies)` for ad-hoc
+    /// access at the view layer.
+    @State private var dependencies: AppDependencies
+    @State private var searchViewModel: SearchViewModel
+
     init() {
-        let searchClient: SearchClient = {
-            #if DEBUG
-            if UserDefaults.standard.bool(forKey: "ui-test-fail-search") {
-                if UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry") {
-                    return .failingThenRecovers
-                }
-                return .failing
+        // Build the live dependency graph, then DEBUG-only override
+        // specific clients based on launch arguments so Maestro can
+        // exercise failure UIs without restarting the staging API.
+        var deps = AppDependencies.live()
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "ui-test-fail-search") {
+            deps.search = UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry")
+                ? .failingThenRecovers
+                : .failing
+        }
+        if UserDefaults.standard.bool(forKey: "ui-test-fail-hotels") {
+            deps.hotels = UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry")
+                ? .failingThenRecovers
+                : .failing
+        }
+        if UserDefaults.standard.bool(forKey: "ui-test-empty-hotels") {
+            deps.hotels = HotelsClient { _ in
+                HotelsSearchResponse(hotels: [], currency: .usd, total: 0)
             }
-            #endif
-            return .live()
-        }()
-        _searchViewModel = State(initialValue: SearchViewModel(client: searchClient, logger: .live))
+        }
+        #endif
+        _dependencies = State(initialValue: deps)
+        _searchViewModel = State(initialValue: SearchViewModel(
+            client: deps.search,
+            logger: deps.logger
+        ))
     }
 
     var body: some Scene {
@@ -73,27 +94,11 @@ struct ResortPassApp: App {
     private var rootContent: some View {
         RootNavigationView(
             searchViewModel: searchViewModel,
-            hotelsClient: hotelsClientForLaunch
+            hotelsClient: dependencies.hotels
         )
+        .environment(\.dependencies, dependencies)
         .environment(\.statusBarStyleAnimator, statusBarAnimator)
         .environment(\.morphTransitionAdapter, morphTransitionAdapter)
-    }
-
-    private var hotelsClientForLaunch: HotelsClient {
-        #if DEBUG
-        if UserDefaults.standard.bool(forKey: "ui-test-fail-hotels") {
-            if UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry") {
-                return .failingThenRecovers
-            }
-            return .failing
-        }
-        if UserDefaults.standard.bool(forKey: "ui-test-empty-hotels") {
-            return HotelsClient { _ in
-                HotelsSearchResponse(hotels: [], currency: .usd, total: 0)
-            }
-        }
-        #endif
-        return .live()
     }
 }
 

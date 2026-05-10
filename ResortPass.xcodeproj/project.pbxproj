@@ -15,6 +15,7 @@
 		2215EBE716E6E30B02E89512 /* Decoders.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5595A077652868FD3B09F8 /* Decoders.swift */; };
 		24BCA94AA7E6BE15C023EE0D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93270355FF5E6240463286A5 /* Theme.swift */; };
 		2946007380D1B669D054ABBA /* NetworkingLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4269250A540C7995B4B229FA /* NetworkingLayerTests.swift */; };
+		2EF075C45C6F05675B3CAEED /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BB3EAC34642F40841EA7C4B7 /* Localizable.strings */; };
 		381597D4ACD40260834AD02F /* CompactHotelCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8E52F79B8B5A071A06FB8A /* CompactHotelCard.swift */; };
 		3D5B8FB17E531C95A47E8DD3 /* HotelListingsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECBAA9276F58F2DAA81D57D2 /* HotelListingsViewModelTests.swift */; };
 		46FDEC8749BEA964B3263ADD /* HotelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FFD8F1B22D03D0AE31904D /* HotelTests.swift */; };
@@ -24,6 +25,7 @@
 		691463FADA621F0D93ADDC9D /* MorphAnimatedTransitioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2731B3B522545A975CD5C7A0 /* MorphAnimatedTransitioning.swift */; };
 		6BB058016EEE95E203F75834 /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53198B5CB0C76A572B82F22 /* Place.swift */; };
 		6D2AE3DBC5686661C1035CBD /* HotelDetailScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4245B1ED045EACE41B95FC16 /* HotelDetailScene.swift */; };
+		731099068F7E63D45B7399F8 /* AppDependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32315AF83E769C1DFBC2B926 /* AppDependencies.swift */; };
 		7A915C996D1B619DC8B29DE3 /* SpecComplianceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FB380DE15B651E17473908 /* SpecComplianceTests.swift */; };
 		7EDECB5766CEED7926FB9562 /* CardPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B01FC824C9E3C19412A909 /* CardPressStyle.swift */; };
 		7F9D707421F20D3CDD5C21AE /* LogClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707DC5FFD7BF85A428FBA516 /* LogClient.swift */; };
@@ -32,6 +34,7 @@
 		9628561E7977EF7826946D80 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F7E2F4538FDB853F5D561AE0 /* Kingfisher */; };
 		9ABF29615844495F552D2DD8 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 7F7D0E5EA4FE354FFF2A5E37 /* Fixtures */; };
 		9B15B3E87B10A91798F3E553 /* EditorialGradeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FD839D8D41B30AFBE3E715 /* EditorialGradeProcessor.swift */; };
+		9B8D5B621D50DFE9FAE24B05 /* AllComponentsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F720E6FD38FB341DEA023F79 /* AllComponentsCatalog.swift */; };
 		9B8DA61B65420ABFE538C3CB /* FailableDecodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E60FD730EBDBF8A82745960 /* FailableDecodable.swift */; };
 		9BF07AA9E860EB1657B351DE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9CA1686C304A4BCE07185E2 /* Assets.xcassets */; };
 		A21BB3F56AE22430ABBC95F3 /* StarRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81992BA483821453807E654 /* StarRating.swift */; };
@@ -81,6 +84,7 @@
 		2C1CF6C4A4CD750AA38DB128 /* ResortPassApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResortPassApp.swift; sourceTree = "<group>"; };
 		2E60FD730EBDBF8A82745960 /* FailableDecodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FailableDecodable.swift; sourceTree = "<group>"; };
 		2E76F22D437DE8ACE603C1CA /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
+		32315AF83E769C1DFBC2B926 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		3CACA5C69132F852CD3A4220 /* Hotel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hotel.swift; sourceTree = "<group>"; };
 		4245B1ED045EACE41B95FC16 /* HotelDetailScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelDetailScene.swift; sourceTree = "<group>"; };
 		4269250A540C7995B4B229FA /* NetworkingLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkingLayerTests.swift; sourceTree = "<group>"; };
@@ -114,6 +118,7 @@
 		9F568419AAE3F48EFDC88E62 /* BrandedImagePlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandedImagePlaceholder.swift; sourceTree = "<group>"; };
 		A9CA1686C304A4BCE07185E2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AE6F241E8B0E6597444EB7B1 /* SearchClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchClient.swift; sourceTree = "<group>"; };
+		BB3EAC34642F40841EA7C4B7 /* Localizable.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		BB6EBFC18B3254620D8F152C /* HTTPClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPClientTests.swift; sourceTree = "<group>"; };
 		C832A7566877F7F8903BB6B3 /* PlayfairDisplay-Italic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlayfairDisplay-Italic.ttf"; sourceTree = "<group>"; };
 		C98992C941505E0E031B769D /* PlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceTests.swift; sourceTree = "<group>"; };
@@ -129,6 +134,7 @@
 		E81992BA483821453807E654 /* StarRating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRating.swift; sourceTree = "<group>"; };
 		ECBAA9276F58F2DAA81D57D2 /* HotelListingsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelListingsViewModelTests.swift; sourceTree = "<group>"; };
 		F54B689C116041413656661D /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
+		F720E6FD38FB341DEA023F79 /* AllComponentsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllComponentsCatalog.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,6 +215,7 @@
 		4C59651B74C0CE6732293B36 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
+				F720E6FD38FB341DEA023F79 /* AllComponentsCatalog.swift */,
 				138AE40F5482CCDF5E72F30A /* Components */,
 				2A627694E195F0CC4D5B6280 /* Tokens */,
 			);
@@ -254,6 +261,7 @@
 			isa = PBXGroup;
 			children = (
 				E59DE1D863BFF0A1579B2D57 /* .gitkeep */,
+				32315AF83E769C1DFBC2B926 /* AppDependencies.swift */,
 				2C1CF6C4A4CD750AA38DB128 /* ResortPassApp.swift */,
 				2B16AF2C6D49F44F1C0C7A29 /* StatusBarBridgeHostingController.swift */,
 				C34AEBBEFA4E54748A9346C7 /* Transitions */,
@@ -298,6 +306,7 @@
 			isa = PBXGroup;
 			children = (
 				A9CA1686C304A4BCE07185E2 /* Assets.xcassets */,
+				BB3EAC34642F40841EA7C4B7 /* Localizable.strings */,
 				2C1A74A3006A79A2E2599B92 /* Fonts */,
 			);
 			path = Resources;
@@ -437,6 +446,7 @@
 			knownRegions = (
 				Base,
 				en,
+				es,
 			);
 			mainGroup = 834BB0A0620AABD57110B38D;
 			minimizedProjectReferenceProxies = 1;
@@ -460,6 +470,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9BF07AA9E860EB1657B351DE /* Assets.xcassets in Resources */,
+				2EF075C45C6F05675B3CAEED /* Localizable.strings in Resources */,
 				BEC4A5A15E8F875DD20F2614 /* PlayfairDisplay-Italic.ttf in Resources */,
 				EA267ABA5A86A6668EDB4907 /* PlayfairDisplay.ttf in Resources */,
 			);
@@ -481,6 +492,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1AE5FCD7E323F3C95EE768B8 /* APIEnvironment.swift in Sources */,
+				9B8D5B621D50DFE9FAE24B05 /* AllComponentsCatalog.swift in Sources */,
+				731099068F7E63D45B7399F8 /* AppDependencies.swift in Sources */,
 				C6FB8C21604EAFF9AC60A8AE /* AppDestination.swift in Sources */,
 				EC6E9C2577E3375B7F992876 /* BrandedImagePlaceholder.swift in Sources */,
 				E2EE3DC787CFE84E5E6E527E /* CachedAsyncImage.swift in Sources */,
