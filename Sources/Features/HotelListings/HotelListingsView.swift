@@ -82,7 +82,14 @@ struct HotelListingsView: View {
                         }
                     }
                 )
-                .transition(.opacity)
+                // Re-tap forces a fresh identity so an in-flight dismiss
+                // of the previous detail is replaced immediately rather
+                // than cross-fading (prevents triple-hero ghosting).
+                .id(sourceID)
+                // Bind the transition's curve to the morph spring envelope
+                // so the surface fade lands with the geometry instead of
+                // running on SwiftUI's default 350ms ease.
+                .transition(.opacity.animation(Theme.Animation.morphSpring))
             }
         }
         .background(Theme.Color.background)
@@ -96,18 +103,26 @@ struct HotelListingsView: View {
         }
     }
 
-    /// Blur applied to the explore layer while detail is up. Ramps 0→24pt
-    /// as `dismissProgress` clears (1 - progress).
+    /// Blur applied to the explore layer — engaged ONLY during the
+    /// finger-on-screen dismiss drag (i.e. `dismissProgress > 0`). The
+    /// forward morph leaves listings sharp, matching Airbnb's behavior:
+    /// they only blur when the user is actively pulling the detail away.
     private var exploreBlurRadius: CGFloat {
         guard case .detailExpanded = viewModel.state.presentation else { return 0 }
-        return (1 - viewModel.state.dismissProgress) * 24
+        let progress = viewModel.state.dismissProgress
+        guard progress > 0 else { return 0 }
+        return (1 - progress) * 24
     }
 
-    /// Dim applied to the explore layer alongside the blur. Detail dims to
-    /// 0.5 when fully expanded (progress=0) and clears to 1.0 as it dismisses.
+    /// Dim applied to the explore layer — gated on the dismiss drag the
+    /// same way `exploreBlurRadius` is. Forward morph leaves listings at
+    /// full opacity; dim only appears once the user begins dragging the
+    /// detail away.
     private var exploreOpacity: Double {
         guard case .detailExpanded = viewModel.state.presentation else { return 1.0 }
-        return 1.0 - (1.0 - Double(viewModel.state.dismissProgress)) * 0.5
+        let progress = viewModel.state.dismissProgress
+        guard progress > 0 else { return 1.0 }
+        return 1.0 - (1.0 - Double(progress)) * 0.5
     }
 }
 
