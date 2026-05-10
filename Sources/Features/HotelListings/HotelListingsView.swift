@@ -19,9 +19,24 @@ struct HotelListingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    /// Single matched-geometry namespace for the card ↔ detail morph.
-    /// Card sources use ids "card-<section>-<hotel>".
+    /// iOS 17 matched-geometry namespace for the card ↔ detail morph (ZStack
+    /// overlay path). Card sources use ids "card-<section>-<hotel>".
+    /// Used as the fallback when iOS 18's `.matchedTransitionSource` is
+    /// unavailable.
     @Namespace private var ns
+
+    /// iOS 18+ shared zoom namespace, supplied by `RootNavigationView` so it
+    /// spans both the card source (here) and the pushed destination
+    /// (`HotelDetailScene` in `.pushed` mode). `nil` when the listings view
+    /// is hosted outside the navigation root (e.g. previews) — the iOS 17
+    /// fallback path is used in that case.
+    private let externalZoomNamespace: Namespace.ID?
+
+    /// iOS 18+ push closure. Called instead of `.cardTapped` when the iOS 18
+    /// path is available so the detail is pushed onto the NavigationStack
+    /// (where `.navigationTransition(.zoom)` runs the system morph). `nil`
+    /// for previews / standalone hosts — falls back to the iOS 17 overlay.
+    private let pushDetail: ((Hotel, String, Currency) -> Void)?
 
     @State private var selectedFilter: HotelListingsState.Filter = .all
 
@@ -31,16 +46,38 @@ struct HotelListingsView: View {
     /// to preserve the existing visual rhythm.
     @ScaledMetric(relativeTo: .title) private var heroHeight: CGFloat = 360
 
-    init(place: Place, client: HotelsClient = .live()) {
+    init(
+        place: Place,
+        client: HotelsClient = .live(),
+        zoomNamespace: Namespace.ID? = nil,
+        pushDetail: ((Hotel, String, Currency) -> Void)? = nil
+    ) {
         _viewModel = State(initialValue: HotelListingsViewModel(
             location: place,
             client: client,
             logger: .live
         ))
+        self.externalZoomNamespace = zoomNamespace
+        self.pushDetail = pushDetail
     }
 
-    init(viewModel: HotelListingsViewModel) {
+    init(
+        viewModel: HotelListingsViewModel,
+        zoomNamespace: Namespace.ID? = nil,
+        pushDetail: ((Hotel, String, Currency) -> Void)? = nil
+    ) {
         _viewModel = State(initialValue: viewModel)
+        self.externalZoomNamespace = zoomNamespace
+        self.pushDetail = pushDetail
+    }
+
+    /// True when the iOS 18 push-based detail path is available AND wired
+    /// up by the host. False on iOS 17 or when no push closure was supplied
+    /// (previews) — the ZStack-overlay morph runs instead.
+    private var useZoomTransitionPath: Bool {
+        guard pushDetail != nil, externalZoomNamespace != nil else { return false }
+        if #available(iOS 18.0, *) { return true }
+        return false
     }
 
     /// Binding that surfaces `state.dismissProgress` to descendants (e.g.
@@ -115,26 +152,74 @@ struct HotelListingsView: View {
         }
     }
 
-    /// Blur applied to the explore layer — engaged ONLY during the
-    /// finger-on-screen dismiss drag (i.e. `dismissProgress > 0`). The
-    /// forward morph leaves listings sharp, matching Airbnb's behavior:
-    /// they only blur when the user is actively pulling the detail away.
+    /// Blur applied to the explore layer (iOS 17 overlay path only —
+    /// the iOS 18 zoom transition handles its own backdrop chrome).
+    /// Engaged whenever the detail is expanded so the listings recede
+    /// during the forward morph too, not just during dismiss. Earlier
+    /// behavior (dismiss-only) caused the source layer to read at full
+    /// fidelity through the morphing detail (Phase A #6 revision).
     private var exploreBlurRadius: CGFloat {
         guard case .detailExpanded = viewModel.state.presentation else { return 0 }
         let progress = viewModel.state.dismissProgress
-        guard progress > 0 else { return 0 }
+        // Full blur during forward morph (progress = 0); ramps back to 0
+        // as the dismiss completes (progress → 1).
         return (1 - progress) * 24
     }
 
-    /// Dim applied to the explore layer — gated on the dismiss drag the
-    /// same way `exploreBlurRadius` is. Forward morph leaves listings at
-    /// full opacity; dim only appears once the user begins dragging the
-    /// detail away.
+    /// Dim applied to the explore layer (iOS 17 overlay path only).
+    /// Floor of 0.7 during forward morph keeps the matched-geometry
+    /// source perceptually present without blocking zoom's source
+    /// dissolve on iOS 18 (where presentation never leaves `.browsing`,
+    /// so this returns 1.0 and the system zoom takes over). Dismiss
+    /// ramps the opacity back up to 1.0 as `dismissProgress` → 1.
     private var exploreOpacity: Double {
         guard case .detailExpanded = viewModel.state.presentation else { return 1.0 }
         let progress = viewModel.state.dismissProgress
-        guard progress > 0 else { return 1.0 }
-        return 1.0 - (1.0 - Double(progress)) * 0.5
+        // 0.7 at full forward morph (progress = 0), 1.0 at dismiss complete.
+        return 0.7 + (1.0 - 0.7) * Double(progress)
+    }
+
+    /// Routes the card tap to either the iOS 18 push-based detail (system
+    /// `.zoom` transition runs automatically) or the iOS 17 ZStack-overlay
+    /// morph (driven by `withAnimation(Theme.Animation.morphSpring)`).
+    private func handleCardTap(hotel: Hotel, sourceID: String, currency: Currency) {
+        if useZoomTransitionPath, let pushDetail {
+            // iOS 18 path: NavigationStack pushes; system zoom plays.
+            // No `withAnimation` — the zoom envelope is system-owned.
+            pushDetail(hotel, sourceID, currency)
+        } else {
+            // iOS 17 path: existing overlay morph driven by morphSpring.
+            withAnimation(Theme.Animation.morphSpring) {
+                viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
+            }
+        }
+    }
+}
+
+// MARK: - Conditional matched-transition source modifier
+
+/// Wraps the iOS-18 `.matchedTransitionSource(id:in:)` (preferred — pairs
+/// with `.navigationTransition(.zoom)` on the destination) and falls back
+/// to iOS-17 `.matchedGeometryEffect(id:in:)` (the ZStack-overlay morph).
+/// `useZoomPath` distinguishes the two paths even when both APIs compile
+/// — on iOS 17 the zoom path is unreachable, but on iOS 18 the host might
+/// still want the overlay path (e.g. previews without a navigation root).
+struct MatchedSourceIfAvailable: ViewModifier {
+    let sourceID: String
+    let zoomNamespace: Namespace.ID?
+    let fallbackNamespace: Namespace.ID
+    let useZoomPath: Bool
+
+    func body(content: Content) -> some View {
+        if useZoomPath, let zoomNamespace {
+            if #available(iOS 18.0, *) {
+                content.matchedTransitionSource(id: sourceID, in: zoomNamespace)
+            } else {
+                content.matchedGeometryEffect(id: sourceID, in: fallbackNamespace)
+            }
+        } else {
+            content.matchedGeometryEffect(id: sourceID, in: fallbackNamespace)
+        }
     }
 }
 
@@ -338,18 +423,17 @@ private extension HotelListingsView {
                         CompactHotelCard(
                             hotel: hotel,
                             currency: currency,
-                            onTap: {
-                                withAnimation(Theme.Animation.morphSpring) {
-                                    viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
-                                }
-                            }
+                            onTap: { handleCardTap(hotel: hotel, sourceID: sourceID, currency: currency) }
                         )
-                        .matchedGeometryEffect(id: sourceID, in: ns)
+                        .modifier(MatchedSourceIfAvailable(
+                            sourceID: sourceID,
+                            zoomNamespace: externalZoomNamespace,
+                            fallbackNamespace: ns,
+                            useZoomPath: useZoomTransitionPath
+                        ))
                         .contextMenu {
                             Button {
-                                withAnimation(Theme.Animation.morphSpring) {
-                                    viewModel.send(.cardTapped(hotel: hotel, sourceID: sourceID))
-                                }
+                                handleCardTap(hotel: hotel, sourceID: sourceID, currency: currency)
                             } label: {
                                 Label("View details", systemImage: "info.circle")
                             }

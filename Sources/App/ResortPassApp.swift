@@ -32,23 +32,10 @@ struct ResortPassApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack(
-                path: Binding(
-                    get: { searchViewModel.state.path },
-                    set: { searchViewModel.send(.pathChanged($0)) }
-                )
-            ) {
-                SearchView(viewModel: searchViewModel)
-                    .navigationDestination(for: AppDestination.self) { destination in
-                        switch destination {
-                        case .hotelListings(let place):
-                            HotelListingsView(
-                                place: place,
-                                client: hotelsClientForLaunch
-                            )
-                        }
-                    }
-            }
+            RootNavigationView(
+                searchViewModel: searchViewModel,
+                hotelsClient: hotelsClientForLaunch
+            )
         }
     }
 
@@ -67,5 +54,77 @@ struct ResortPassApp: App {
         }
         #endif
         return .live()
+    }
+}
+
+// MARK: - Root navigation host
+
+/// Owns the shared zoom-transition `@Namespace`. Must be a View (not the App
+/// itself) so the namespace lives in a body that re-emits both the source
+/// (card in HotelListingsView) and the destination (HotelDetailScene). The
+/// iOS 18 `.matchedTransitionSource` + `.navigationTransition(.zoom)` pair
+/// requires a single namespace shared across both ends of the morph.
+///
+/// On iOS 17 the namespace is unused — the listings view falls back to its
+/// internal matchedGeometryEffect + ZStack overlay path.
+private struct RootNavigationView: View {
+    let searchViewModel: SearchViewModel
+    let hotelsClient: HotelsClient
+
+    @Namespace private var zoomNamespace
+
+    var body: some View {
+        NavigationStack(
+            path: Binding(
+                get: { searchViewModel.state.path },
+                set: { searchViewModel.send(.pathChanged($0)) }
+            )
+        ) {
+            SearchView(viewModel: searchViewModel)
+                .navigationDestination(for: AppDestination.self) { destination in
+                    switch destination {
+                    case .hotelListings(let place):
+                        HotelListingsView(
+                            place: place,
+                            client: hotelsClient,
+                            zoomNamespace: zoomNamespace,
+                            pushDetail: { hotel, sourceID, currency in
+                                searchViewModel.send(.pathChanged(
+                                    searchViewModel.state.path + [.hotelDetail(hotel: hotel, sourceID: sourceID, currency: currency)]
+                                ))
+                            }
+                        )
+                    case .hotelDetail(let hotel, let sourceID, let currency):
+                        // Pushed-mode detail (iOS 18+ path). Receives the same
+                        // namespace as the source card so `.zoom(sourceID:in:)`
+                        // can match. iOS 17 never produces this case.
+                        HotelDetailScene(
+                            hotel: hotel,
+                            currency: currency,
+                            presentationStyle: .pushed
+                        )
+                        .modifier(ZoomTransitionIfAvailable(sourceID: sourceID, namespace: zoomNamespace))
+                    }
+                }
+        }
+    }
+}
+
+// MARK: - Conditional zoom transition modifier
+
+/// Applies `.navigationTransition(.zoom(sourceID:in:))` on iOS 18+, no-op on
+/// iOS 17. The iOS 17 path never reaches this modifier (the listings view
+/// uses its ZStack-overlay fallback instead of pushing `.hotelDetail`), but
+/// the gate is required for the file to compile against the iOS 17 SDK.
+struct ZoomTransitionIfAvailable: ViewModifier {
+    let sourceID: String
+    let namespace: Namespace.ID
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.navigationTransition(.zoom(sourceID: sourceID, in: namespace))
+        } else {
+            content
+        }
     }
 }

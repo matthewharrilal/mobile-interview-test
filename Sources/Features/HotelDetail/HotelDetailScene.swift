@@ -18,57 +18,128 @@
 import SwiftUI
 
 struct HotelDetailScene: View {
+    /// Two presentation modes — pick the one that matches how the host
+    /// mounts this scene. The selection drives whether the iOS 17
+    /// matched-geometry hero, drag-to-dismiss gesture, dismissProgress
+    /// binding, contentOpacity reveal, and chevron close button are
+    /// active. Both modes render the same visual content.
+    enum PresentationStyle {
+        /// iOS 17 path: scene is mounted as a ZStack overlay above the
+        /// listings. The hero wears `matchedGeometryEffect`, a DragGesture
+        /// drives dismissProgress, the chevron close fires `onDismiss`,
+        /// and contentOpacity orchestrates the post-morph fade.
+        case overlay
+        /// iOS 18 path: scene is pushed onto a NavigationStack with
+        /// `.navigationTransition(.zoom)`. The system handles the morph,
+        /// the back-swipe gesture, and the backdrop chrome. No
+        /// matchedGeometryEffect (zoom snapshots its own layer), no
+        /// DragGesture, no chevron, no dismissProgress, no manual fade.
+        case pushed
+    }
+
     let hotel: Hotel
     let currency: Currency
-    let ns: Namespace.ID
-    let sourceID: String
-    @Binding var dismissProgress: CGFloat
-    /// Invoked when the user commits the dismiss gesture. The CGFloat is
-    /// the throw velocity along the drag axis in pt/sec, computed from the
-    /// gesture's `predictedEndTranslation` over SwiftUI's ~0.1s prediction
-    /// window. The host uses this to scale the morph spring's response so
-    /// a fast flick dismisses faster than a slow drag — closes the velocity
-    /// discontinuity at the gesture release boundary
-    /// (cohesion-animation-system B-3 fix).
-    var onDismiss: (CGFloat) -> Void
+    let presentationStyle: PresentationStyle
+
+    // MARK: Overlay-mode-only properties (iOS 17 path)
+    private let ns: Namespace.ID?
+    private let sourceID: String?
+    private let dismissProgressBinding: Binding<CGFloat>?
+    private let onDismiss: ((CGFloat) -> Void)?
 
     /// 0 while the matched-geometry hero is still morphing from the card,
     /// 1 once the surrounding content has faded in. Driven by a `.task`
     /// that fires ~160ms after mount (geometry settles ~150ms; the brief
     /// asks for an 80–100ms beat AFTER that before content appears).
+    /// Overlay mode only — pushed mode skips the manual fade because the
+    /// system zoom transition handles arrival natively.
     @State private var contentOpacity: Double = 0
 
     /// Live drag translation on the hero. Drives `dismissProgress` (writer
     /// contract) and the rubber-band offset on the hero itself. Reset on
     /// snap-back; on commit the host's morph-spring drives unwind.
+    /// Overlay mode only.
     @State private var dragTranslation: CGFloat = 0
 
     // MARK: Drag thresholds (per UX-research §7)
     /// Below this point, release rubber-bands back — no commit.
-    private static let dismissCancelBelow: CGFloat = 100
+    fileprivate static let dismissCancelBelow: CGFloat = 100
     /// At/above this point, release commits the dismiss.
-    private static let dismissCommitAt: CGFloat = 200
+    fileprivate static let dismissCommitAt: CGFloat = 200
     /// `dismissProgress` reaches 1.0 when translation hits this value.
-    private static let dismissProgressDistance: CGFloat = 600
+    fileprivate static let dismissProgressDistance: CGFloat = 600
+
+    /// iOS 17 overlay-mode initializer — preserves the legacy contract.
+    init(
+        hotel: Hotel,
+        currency: Currency,
+        ns: Namespace.ID,
+        sourceID: String,
+        dismissProgress: Binding<CGFloat>,
+        onDismiss: @escaping (CGFloat) -> Void
+    ) {
+        self.hotel = hotel
+        self.currency = currency
+        self.presentationStyle = .overlay
+        self.ns = ns
+        self.sourceID = sourceID
+        self.dismissProgressBinding = dismissProgress
+        self.onDismiss = onDismiss
+    }
+
+    /// iOS 18 pushed-mode initializer — no namespace / drag plumbing.
+    /// The system zoom transition (applied externally via
+    /// `.navigationTransition(.zoom)`) drives the morph and dismiss.
+    init(
+        hotel: Hotel,
+        currency: Currency,
+        presentationStyle: PresentationStyle
+    ) {
+        precondition(
+            presentationStyle == .pushed,
+            "Use the namespace-bearing initializer for .overlay mode."
+        )
+        self.hotel = hotel
+        self.currency = currency
+        self.presentationStyle = presentationStyle
+        self.ns = nil
+        self.sourceID = nil
+        self.dismissProgressBinding = nil
+        self.onDismiss = nil
+    }
 
     var body: some View {
-        // Cap opacity at 0.999 to stay within the layer-promoted regime —
-        // crossing exactly 1.0 makes SwiftUI un-promote the layer on the
-        // final frame, producing a visible "snap" on every morph settle
-        // (cohesion-rendering-pipeline F-1 fix).
-        let safeOpacity = min(contentOpacity, 0.999)
-        return ZStack(alignment: .topLeading) {
+        switch presentationStyle {
+        case .overlay:
+            overlayBody
+        case .pushed:
+            pushedBody
+        }
+    }
+
+    // MARK: Overlay body (iOS 17 path — unchanged behavior)
+
+    @ViewBuilder
+    private var overlayBody: some View {
+        // Reach full opacity (1.0) so the listings layer cannot bleed
+        // through the settled detail. The earlier 0.999 cap prevented
+        // un-promote-at-1.0 layer thrash but caused permanent listings
+        // bleed-through (eyebrow + section header ghosting under the
+        // detail content). `.compositingGroup()` on the ZStack keeps
+        // layer promotion stable across the opacity ramp without the
+        // cap (cohesion-rendering-pipeline F-1 alternate fix).
+        ZStack(alignment: .topLeading) {
             // Detail surface — fades in BEHIND the morphing hero so the
             // hero stays continuously visible while the surface arrives.
             Theme.Color.background
                 .ignoresSafeArea()
-                .opacity(safeOpacity)
+                .opacity(contentOpacity)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
-                    hero
+                    overlayHero
                     content
-                        .opacity(safeOpacity)
+                        .opacity(contentOpacity)
                 }
                 .padding(.bottom, Theme.Spacing.xl)
             }
@@ -79,8 +150,9 @@ struct HotelDetailScene: View {
             // gesture-driven dismiss. Stays useful as a fallback for users who
             // can't perform a swipe.
             closeButton
-                .opacity(safeOpacity)
+                .opacity(contentOpacity)
         }
+        .compositingGroup()
         .onAppear {
             // Geometry settles ~150ms (spring response 0.25, damping 0.95);
             // brief asks for 80–100ms beat before content fade-in. Driving
@@ -93,18 +165,41 @@ struct HotelDetailScene: View {
             }
         }
     }
+
+    // MARK: Pushed body (iOS 18 path — system-driven morph)
+
+    @ViewBuilder
+    private var pushedBody: some View {
+        // No matchedGeometryEffect, no DragGesture, no chevron, no
+        // contentOpacity reveal — the system zoom transition handles
+        // arrival from the card source frame and the back-swipe gesture
+        // drives dismiss with a velocity-coupled spring. The plain hero
+        // is what zoom rasterizes its destination snapshot from.
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                pushedHero
+                content
+            }
+            .padding(.bottom, Theme.Spacing.xl)
+        }
+        .scrollIndicators(.hidden)
+        .ignoresSafeArea(edges: .top)
+        .background(Theme.Color.background.ignoresSafeArea())
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.thinMaterial, for: .navigationBar)
+    }
 }
 
-// MARK: - Hero
+// MARK: - Hero (overlay-mode, iOS 17 path)
 
 private extension HotelDetailScene {
-    /// Hero region — wears the same matched-geometry id as the carousel card,
-    /// so SwiftUI morphs the card into the hero (and back) on presentation
-    /// changes. The lift shadow during the morph reads as a "card stepping
-    /// off the page" — Airbnb uses an equivalent cue at frame 4–5 of their
-    /// expansion. The card (carousel) is the source; this destination omits
-    /// `isSource:` so the pair has exactly one source — avoids undefined
-    /// dual-source behavior.
+    /// Hero region for OVERLAY mode — wears the same matched-geometry id as
+    /// the carousel card, so SwiftUI morphs the card into the hero (and
+    /// back) on presentation changes. The lift shadow during the morph
+    /// reads as a "card stepping off the page" — Airbnb uses an equivalent
+    /// cue at frame 4–5 of their expansion. The card (carousel) is the
+    /// source; this destination omits `isSource:` so the pair has exactly
+    /// one source — avoids undefined dual-source behavior.
     ///
     /// Sibling-layer shadow pattern (cohesion-rendering-pipeline F + H fix):
     /// the radius-24 shadow is hosted by an INVISIBLE carrier RoundedRectangle
@@ -117,32 +212,49 @@ private extension HotelDetailScene {
     /// source on the card (the source-card carries no shadow at this id;
     /// the carrier fades in via `contentOpacity` so it doesn't ghost-jump).
     ///
-    /// Worker C wires the `DragGesture` here for the swipe-down dismiss
-    /// (gesture must NOT be on the whole scene — would eat ScrollView pan).
-    var hero: some View {
-        ZStack {
-            // Shadow sibling — stable layer-promoted backing store, frame
-            // synced via matched-geometry id derived from sourceID. Uses
-            // a near-zero opacity carrier so the shadow has a substrate
-            // to render against without painting any visible fill.
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
-                .fill(Color.black.opacity(0.001))
-                .frame(height: 360)
-                .matchedGeometryEffect(id: "\(sourceID).shadow", in: ns)
-                .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
-                .opacity(min(contentOpacity, 0.999))
+    /// The `DragGesture` for swipe-down dismiss is attached here (not the
+    /// whole scene) so it does not eat the ScrollView pan.
+    @ViewBuilder
+    var overlayHero: some View {
+        if let ns, let sourceID {
+            ZStack {
+                // Shadow sibling — stable layer-promoted backing store, frame
+                // synced via matched-geometry id derived from sourceID. Uses
+                // a near-zero opacity carrier so the shadow has a substrate
+                // to render against without painting any visible fill.
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
+                    .fill(Color.black.opacity(0.001))
+                    .frame(height: 360)
+                    .matchedGeometryEffect(id: "\(sourceID).shadow", in: ns)
+                    .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
+                    .opacity(contentOpacity)
 
-            // Hero image — no shadow; pure matched-geometry frame morph.
-            HotelImageCarousel(
-                urls: hotel.imageURLs,
-                hotelName: hotel.name,
-                hotelStar: hotel.hotelStar
-            )
-            .frame(height: 360)
-            .matchedGeometryEffect(id: sourceID, in: ns)
+                // Hero image — no shadow; pure matched-geometry frame morph.
+                HotelImageCarousel(
+                    urls: hotel.imageURLs,
+                    hotelName: hotel.name,
+                    hotelStar: hotel.hotelStar
+                )
+                .frame(height: 360)
+                .matchedGeometryEffect(id: sourceID, in: ns)
+            }
+            .offset(y: rubberBandedOffset(for: dragTranslation))
+            .gesture(dismissDrag)
         }
-        .offset(y: rubberBandedOffset(for: dragTranslation))
-        .gesture(dismissDrag)
+    }
+
+    /// Hero region for PUSHED mode — plain carousel, no
+    /// matchedGeometryEffect (the system zoom transition snapshots its own
+    /// destination layer; an extra geometry binding would conflict with
+    /// the zoom's frame ownership), no DragGesture (the NavigationStack
+    /// edge-swipe handles dismiss).
+    var pushedHero: some View {
+        HotelImageCarousel(
+            urls: hotel.imageURLs,
+            hotelName: hotel.name,
+            hotelStar: hotel.hotelStar
+        )
+        .frame(height: 360)
     }
 
     /// Light rubber-band so even sub-100pt drags feel tactile. Linear up to
@@ -158,13 +270,14 @@ private extension HotelDetailScene {
     /// Drag gesture on the hero that drives the `dismissProgress` binding
     /// (writer contract) and fires `onDismiss` once the commit threshold
     /// is crossed on release. Restricted to the hero so ScrollView panning
-    /// of the content below remains unaffected.
+    /// of the content below remains unaffected. Overlay-mode only — pushed
+    /// mode uses NavigationStack's edge-swipe-back instead.
     var dismissDrag: some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 let downward = max(0, value.translation.height)
                 dragTranslation = downward
-                dismissProgress = min(1, max(0, downward / Self.dismissProgressDistance))
+                dismissProgressBinding?.wrappedValue = min(1, max(0, downward / Self.dismissProgressDistance))
             }
             .onEnded { value in
                 let downward = max(0, value.translation.height)
@@ -179,13 +292,13 @@ private extension HotelDetailScene {
                     let throwVelocity = max(0, (predicted - downward) / 0.1)
                     // Host owns the morph-spring envelope on `onDismiss`;
                     // we just fire the callback with the velocity and let it run.
-                    onDismiss(throwVelocity)
+                    onDismiss?(throwVelocity)
                 } else {
                     // Rubber-band snap-back — both <100pt and 100–200pt
                     // bands cancel. Spring back to rest.
                     withAnimation(Theme.Animation.snapBack) {
                         dragTranslation = 0
-                        dismissProgress = 0
+                        dismissProgressBinding?.wrappedValue = 0
                     }
                 }
             }
@@ -251,8 +364,9 @@ private extension HotelDetailScene {
 
     var closeButton: some View {
         // Tap-driven dismiss carries no throw velocity — host receives 0
-        // and uses its baseline morph-spring envelope.
-        Button(action: { onDismiss(0) }) {
+        // and uses its baseline morph-spring envelope. Overlay-mode only;
+        // pushed mode relies on the navigation back chevron.
+        Button(action: { onDismiss?(0) }) {
             Image(systemName: "chevron.down")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Theme.Color.textPrimary)
