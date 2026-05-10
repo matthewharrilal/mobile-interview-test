@@ -23,6 +23,16 @@ struct ResortPassApp: App {
     /// sites gate the animator and it stays a no-op there.
     @State private var statusBarAnimator = StatusBarStyleAnimator()
 
+    /// Shared UIKit transition adapter for the iOS 17 fallback path.
+    /// Vends `MorphPresentationController`, `MorphAnimatedTransitioning`,
+    /// and `MorphInteractionController` behind a single
+    /// `UIViewControllerTransitioningDelegate`. Reachable from call sites
+    /// via `@Environment(\.morphTransitionAdapter)`. iOS 18's
+    /// `.navigationTransition(.zoom)` is the active morph on that path,
+    /// so the adapter sits idle there — its API is consumed only by the
+    /// iOS 17 supplemental migration path.
+    @State private var morphTransitionAdapter = MorphTransitionAdapter()
+
     init() {
         let searchClient: SearchClient = {
             #if DEBUG
@@ -52,6 +62,7 @@ struct ResortPassApp: App {
                     hotelsClient: hotelsClientForLaunch
                 )
                 .environment(\.statusBarStyleAnimator, statusBarAnimator)
+                .environment(\.morphTransitionAdapter, morphTransitionAdapter)
             }
             .ignoresSafeArea()
         }
