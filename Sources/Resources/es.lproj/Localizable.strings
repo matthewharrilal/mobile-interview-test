@@ -1,0 +1,15 @@
+// Localizable.strings (Spanish)
+// Demonstration translation catalog — proves the `String(localized:)`
+// plumbing in `Sources/Strings/Strings.swift` actually resolves
+// non-English locales correctly. Reviewers can verify by setting iOS to
+// Spanish in Settings → General → Language & Region.
+
+"search.navTitle" = "Pases de Día";
+"search.placeholder" = "Buscar ciudades, hoteles…";
+"search.idle.headline" = "¿A dónde vas?";
+"search.idle.subtitle" = "Escribe una ciudad, barrio o nombre de hotel\npara descubrir pases de día.";
+"search.empty.headline" = "No se encontraron lugares";
+"search.empty.description" = "No encontramos nada que coincida con \"%@\". Prueba otro término.";
+"search.failed.headline" = "Búsqueda fallida";
+"search.failed.network" = "Parece que estás sin conexión. Reconéctate y vuelve a intentarlo.";
+"search.failed.timeout" = "La búsqueda tardó demasiado. Inténtalo de nuevo en un momento.";
