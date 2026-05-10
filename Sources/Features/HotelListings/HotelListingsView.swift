@@ -479,6 +479,11 @@ private extension HotelListingsView {
                     .frame(maxWidth: 60)
             }
             .padding(.horizontal, Theme.Spacing.m)
+            // Combine the heading + subtitle into a single VoiceOver
+            // element and mark it as a header so VoiceOver users can
+            // rotor-skim section by section.
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.l) {   // wider gap so cards don't fuse at edges
