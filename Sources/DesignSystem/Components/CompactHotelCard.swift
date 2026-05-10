@@ -11,6 +11,12 @@ struct CompactHotelCard: View {
     let currency: Currency
     var onTap: (() -> Void)?
 
+    // Dynamic Type responsive frame — at default (.large) sizes match the
+    // historical 220×200 layout exactly; at xxLarge+ the frame grows so the
+    // hotel name and italic tagline have headroom and don't truncate/wrap.
+    @ScaledMetric(relativeTo: .body) private var cardWidth: CGFloat = 220
+    @ScaledMetric(relativeTo: .body) private var cardImageHeight: CGFloat = 200
+
     var body: some View {
         Button { onTap?() } label: {
             content
@@ -25,7 +31,7 @@ struct CompactHotelCard: View {
                 hotelName: hotel.name,
                 hotelStar: hotel.hotelStar
             )
-            .frame(width: 220, height: 200)
+            .frame(width: cardWidth, height: cardImageHeight)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
             .shadow(
@@ -78,7 +84,7 @@ struct CompactHotelCard: View {
             .padding(.horizontal, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 220, alignment: .top)   // Width pinned; height now driven by .lineLimit(reservesSpace) so all cards align.
+        .frame(width: cardWidth, alignment: .top)   // Width scales with Dynamic Type; height driven by .lineLimit(reservesSpace) so all cards align.
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Strings.Accessibility.hotelRowLabel(
             name: hotel.name,
