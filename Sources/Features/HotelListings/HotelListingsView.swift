@@ -1,6 +1,17 @@
 // HotelListingsView.swift
 // Sectioned editorial layout: parallax location header → filter chip strip →
 // curated horizontal carousels per section. Image-bleed cards.
+//
+// Hosts the transition shell (architect-scaffolded) for three Airbnb-style
+// transitions:
+//   1. Search-pill blur-crossfade  → SearchActiveOverlay (Worker A)
+//   2. Card → detail expansion      → HotelDetailScene  (Worker B)
+//   3. Swipe-down dismiss           → HotelDetailScene  (Worker C)
+//
+// Composition is a ZStack — explore content underneath, search-pill chrome
+// floating on top, and conditional overlay layers (search / detail) mounted
+// only while their state is active. See ux-research/team/01-integration-plan.md
+// for the boundary between the three workers.
 
 import SwiftUI
 
@@ -8,10 +19,21 @@ import SwiftUI
 
 struct HotelListingsView: View {
     @State private var viewModel: HotelListingsViewModel
+    @State private var searchViewModel: SearchViewModel
     @Environment(\.dismiss) private var dismiss
-    @Namespace private var heroNamespace
+
+    /// Single matched-geometry namespace for every cross-cutting morph:
+    /// "searchPill" (host pill ↔ overlay pill), "card-…" (carousel card ↔
+    /// detail hero). One namespace = one morph graph; ids stay distinct.
+    @Namespace private var ns
+
     @State private var selectedFilter: HotelListingsState.Filter = .all
-    @State private var presentedHotel: Hotel?
+    @State private var presentation: PresentationLayer = .browsing
+
+    /// 0 when detail is fully expanded, 1 when the dismiss-throw completes.
+    /// Worker C writes via the `HotelDetailScene` binding; the host reads it
+    /// to drive the explore layer's un-blur live as the detail clears.
+    @State private var dismissProgress: CGFloat = 0
 
     init(place: Place, client: HotelsClient = .live()) {
         _viewModel = State(initialValue: HotelListingsViewModel(
@@ -19,13 +41,110 @@ struct HotelListingsView: View {
             client: client,
             logger: .live
         ))
+        // TODO(polish): thread `.live()` SearchClient from ResortPassApp.
+        _searchViewModel = State(initialValue: SearchViewModel(
+            client: .preview,
+            logger: .silent
+        ))
     }
 
     init(viewModel: HotelListingsViewModel) {
         _viewModel = State(initialValue: viewModel)
+        _searchViewModel = State(initialValue: SearchViewModel(
+            client: .preview,
+            logger: .silent
+        ))
+    }
+
+    /// Three discrete top-level layers. The base layer is always mounted;
+    /// the other two are conditional and host their own surfaces.
+    enum PresentationLayer: Equatable {
+        case browsing
+        case searchActive
+        case detailExpanded(hotel: Hotel, sourceID: String)
     }
 
     var body: some View {
+        ZStack(alignment: .top) {
+            exploreContent
+                .blur(radius: exploreBlurRadius)
+                .opacity(exploreOpacity)
+                .allowsHitTesting(presentation == .browsing)
+
+            // Floating search-pill chrome — pinned, never scrolls. Source
+            // identity for the "searchPill" matched-geometry. Hidden when
+            // the search overlay is up (the overlay carries the matching id).
+            if presentation != .searchActive {
+                searchPillBar
+                    .matchedGeometryEffect(id: "searchPill", in: ns)
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.top, Theme.Spacing.s)
+            }
+
+            // Worker A's surface — fills in blur/dim/crossfade.
+            if presentation == .searchActive {
+                SearchActiveOverlay(
+                    viewModel: searchViewModel,
+                    ns: ns,
+                    onDismiss: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            presentation = .browsing
+                        }
+                    }
+                )
+                .transition(.opacity)
+            }
+
+            // Workers B + C surface — fill in matched-geometry + drag.
+            if case .detailExpanded(let hotel, let sourceID) = presentation,
+               case .loaded(let loaded) = viewModel.state.status {
+                HotelDetailScene(
+                    hotel: hotel,
+                    currency: loaded.currency,
+                    ns: ns,
+                    sourceID: sourceID,
+                    dismissProgress: $dismissProgress,
+                    onDismiss: {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            presentation = .browsing
+                            dismissProgress = 0
+                        }
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+        .background(Theme.Color.background)
+        .navigationTitle(viewModel.state.location.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.thinMaterial, for: .navigationBar)
+        .toolbar(presentation == .browsing ? .visible : .hidden, for: .navigationBar)
+        .onAppear { viewModel.send(.appeared) }
+        .onChange(of: selectedFilter) { _, new in
+            viewModel.send(.filterChanged(new))
+        }
+    }
+
+    /// Blur applied to the explore layer. Ramps in proportional to how
+    /// "expanded" the detail layer is (1 - dismissProgress while the layer
+    /// is mounted; otherwise 0). Worker B can re-tune the 24pt ceiling.
+    private var exploreBlurRadius: CGFloat {
+        guard case .detailExpanded = presentation else { return 0 }
+        return (1 - dismissProgress) * 24
+    }
+
+    /// Dim applied to the explore layer alongside the blur. Same logic —
+    /// Worker B refines the 0.5 floor.
+    private var exploreOpacity: Double {
+        guard case .detailExpanded = presentation else { return 1.0 }
+        return 1.0 - (1.0 - Double(dismissProgress)) * 0.5
+    }
+}
+
+// MARK: - Explore content
+
+private extension HotelListingsView {
+    var exploreContent: some View {
         Group {
             switch viewModel.state.status {
             case .idle, .loading:
@@ -38,21 +157,41 @@ struct HotelListingsView: View {
                 failedState(message)
             }
         }
-        .background(Theme.Color.background)
-        .navigationTitle(viewModel.state.location.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.thinMaterial, for: .navigationBar)
-        .onAppear { viewModel.send(.appeared) }
-        .onChange(of: selectedFilter) { _, new in
-            viewModel.send(.filterChanged(new))
-        }
-        .sheet(item: $presentedHotel) { hotel in
-            if case .loaded(let loaded) = viewModel.state.status {
-                HotelDetailSheet(hotel: hotel, currency: loaded.currency)
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Search pill (host source)
+
+private extension HotelListingsView {
+    /// Pill that matches the search bar inside `SearchActiveOverlay`. Tapping
+    /// commits the `searchActive` state through the view's intent system
+    /// equivalent here (a SwiftUI `withAnimation` envelope around state mutation).
+    var searchPillBar: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                presentation = .searchActive
             }
+        } label: {
+            HStack(spacing: Theme.Spacing.s) {
+                Image(systemName: Theme.Icon.search)
+                    .foregroundStyle(Theme.Color.textTertiary)
+                Text("Search hotels")
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Color.textSecondary)
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.m)
+            .padding(.vertical, Theme.Spacing.s + 2)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.l))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.l)
+                    .stroke(Theme.Color.border, lineWidth: 0.5)
+            )
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Search hotels"))
+        .accessibilityAddTraits(.isSearchField)
     }
 }
 
@@ -226,14 +365,23 @@ private extension HotelListingsView {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.l) {   // wider gap so cards don't fuse at edges
                     ForEach(section.hotels) { hotel in
+                        let sourceID = "card-\(section.id)-\(hotel.id)"
                         CompactHotelCard(
                             hotel: hotel,
                             currency: currency,
-                            onTap: { presentedHotel = hotel }
+                            onTap: {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+                                }
+                            }
                         )
-                        .matchedGeometryEffect(id: "card-\(section.id)-\(hotel.id)", in: heroNamespace)
+                        .matchedGeometryEffect(id: sourceID, in: ns)
                         .contextMenu {
-                            Button { presentedHotel = hotel } label: {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+                                }
+                            } label: {
                                 Label("View details", systemImage: "info.circle")
                             }
                         } preview: {
@@ -321,75 +469,7 @@ private extension HotelListingsView {
     }
 }
 
-// MARK: - Detail sheet + preview
-
-struct HotelDetailSheet: View {
-    let hotel: Hotel
-    let currency: Currency
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.l) {
-                HotelImageCarousel(
-                    urls: hotel.imageURLs,
-                    hotelName: hotel.name,
-                    hotelStar: hotel.hotelStar
-                )
-                .frame(height: 280)
-
-                VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                    if let location = hotel.displayLocation {
-                        Text(location.uppercased())
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .tracking(1.3)
-                            .foregroundStyle(Theme.Color.textTertiary)
-                    }
-                    Text(hotel.name)
-                        .font(Theme.Typography.editorialDisplay)
-                        .foregroundStyle(Theme.Color.textPrimary)
-                    if let rating = hotel.rating, rating > 0 {
-                        HStack(spacing: 6) {
-                            StarRating(value: rating, size: 14)
-                            Text(String(format: "%.1f", rating))
-                                .font(.system(.subheadline, design: .serif).weight(.medium).monospacedDigit())
-                            if hotel.reviewCount > 0 {
-                                Text("(\(hotel.reviewCount) reviews)")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Theme.Color.textSecondary)
-                            }
-                        }
-                    }
-                }
-
-                Divider()
-
-                if let product = hotel.productName {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                        Text("Available today")
-                            .font(.system(.caption, design: .rounded).weight(.semibold))
-                            .tracking(1.0)
-                            .foregroundStyle(Theme.Color.textTertiary)
-                        Text(product)
-                            .font(.system(.title3, design: .serif).weight(.medium))
-                            .foregroundStyle(Theme.Color.textPrimary)
-                        if let price = hotel.cheapestPrice {
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("from")
-                                    .font(.system(.body, design: .serif).italic())
-                                    .foregroundStyle(Theme.Color.textTertiary)
-                                Text("\(currency.symbol)\(Int(price))")
-                                    .font(.system(.title, design: .serif).weight(.semibold).monospacedDigit())
-                                    .foregroundStyle(Theme.Color.textPrimary)
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(Theme.Spacing.l)
-        }
-        .background(Theme.Color.background)
-    }
-}
+// MARK: - Detail preview (context-menu only)
 
 struct HotelDetailPreview: View {
     let hotel: Hotel
