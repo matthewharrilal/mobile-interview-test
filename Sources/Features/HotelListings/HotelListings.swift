@@ -42,7 +42,30 @@ struct HotelListingsState: Equatable, Sendable {
 
         /// Filtered + sectioned hotels. Drives the curated section layout
         /// (Top picks, Within walking distance, etc.) instead of one flat list.
-        var sections: [Section] {
+        ///
+        /// Stored (not computed) so the filter+sort×2+prefix+Set+filter
+        /// pipeline doesn't run on every body access during the morph hot
+        /// path. Recomputed via `Self.buildSections(...)` only when
+        /// `hotels` or `activeFilter` mutates.
+        private(set) var sections: [Section]
+
+        init(hotels: [Hotel], currency: Currency, activeFilter: Filter) {
+            self.hotels = hotels
+            self.currency = currency
+            self.activeFilter = activeFilter
+            self.sections = Self.buildSections(hotels: hotels, activeFilter: activeFilter)
+        }
+
+        /// Mutate `activeFilter` and refresh `sections` in one call so the
+        /// stored value never drifts from its inputs.
+        mutating func updateFilter(_ filter: Filter) {
+            self.activeFilter = filter
+            self.sections = Self.buildSections(hotels: hotels, activeFilter: filter)
+        }
+
+        /// Pure section builder — single source of truth for the
+        /// filter/sort/group pipeline. Called from `init` and `updateFilter`.
+        static func buildSections(hotels: [Hotel], activeFilter: Filter) -> [Section] {
             let base = hotels.filter(activeFilter.matches)
             var result: [Section] = []
 
@@ -205,7 +228,7 @@ final class HotelListingsViewModel {
             break
         case .filterChanged(let filter):
             if case .loaded(var loaded) = state.status {
-                loaded.activeFilter = filter
+                loaded.updateFilter(filter)
                 state.status = .loaded(loaded)
             }
         case .cardTapped(let hotel, let sourceID):
