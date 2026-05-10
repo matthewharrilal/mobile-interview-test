@@ -2,6 +2,8 @@
 
 Two-screen iOS app for the ResortPass Founding iOS Engineer interview. Search for a place, view available hotel day passes at that place. Built with SwiftUI, hand-rolled MVI, and Swift Concurrency against the staging API.
 
+Architecture conventions are documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md). Major design decisions are recorded in [`docs/ADRs.md`](./docs/ADRs.md).
+
 ## Setup
 
 ```
@@ -60,14 +62,27 @@ The reducer is synchronous and pure with respect to its inputs; the only side ef
 
 | Concern | Choice | Rationale |
 |---------|--------|-----------|
-| UI Framework | SwiftUI | Required by spec. No UIKit drop-down needed for these screens. |
+| UI Framework | SwiftUI primary, UIKit at specific seams (see below) | Spec requires SwiftUI primary; UIKit drops are called out per-file with justification in **UIKit drops** section below. |
 | Concurrency | `async/await` + `Task` + `ContinuousClock` | Idiomatic Swift Concurrency. `ContinuousClock.sleep(for:)` is injectable, making the 500ms debounce testable without timing flakes. Combine would also work for debounce, but introducing it just for one operator wasn't worth the conceptual surface area. |
 | Networking | `URLSession` directly, wrapped in a Sendable `HTTPClient` struct | Two endpoints don't need Alamofire. The wrapper centralizes status validation + injectable transport (so tests can stub via `URLProtocol`), and keeps the dependency surface to the standard library. |
-| Image caching | Kingfisher 8.x via `CachedAsyncImage` wrapper | Memory + disk cache out of the box. `cancelOnDisappear` matches the scroll-cancellation behavior we want. The wrapper means a future swap to a different cache only changes one file. |
+| Image caching | Kingfisher 8.x via `CachedAsyncImage` wrapper | Memory (100MB default LRU) + disk (~1GB default, 7-day TTL) cache out of the box. `cancelOnDisappear` matches the scroll-cancellation behavior we want. `EditorialGradeProcessor` (CIFilter + a Metal/MPS fallback) runs once per URL and the result is cached against the processor identifier so the grade isn't recomputed on every scroll. Wrapper means a future swap to a different cache changes one file. |
 | State management | Hand-rolled MVI with `@Observable` | See above. |
 | Dependency Injection | Manual constructor injection | The dependency graph is tiny (each VM takes 2-3 closures via Client struct). A DI container (Factory, Swinject) would add ceremony for ~zero readability win. `.live` defaults make production wiring concise; tests pass `.failing` or fixtures explicitly. |
 | Navigation | `NavigationStack(path:)` value-based with `AppDestination` enum | Type-safe deep-link surface. New screens add an enum case. |
-| Minimum iOS | 17.0 | Spec allows 16+; we lift to 17 to use `@Observable`, `ContentUnavailableView`, native value-based `NavigationStack(path:)`, and stable `ContinuousClock`. The complexity savings vs the install-base trade-off favored 17 for this codebase shape. |
+| Minimum iOS | 17.0 | Spec allows 16+; we lift to 17 to use `@Observable`, `ContentUnavailableView`, native value-based `NavigationStack(path:)`, and stable `ContinuousClock`. The complexity savings vs the install-base trade-off favored 17 for this codebase shape. See `docs/ADRs.md > ADR-002`. |
+
+## UIKit drops
+
+This is a SwiftUI-primary app. UIKit appears at six specific seams, each with a documented technical justification:
+
+| File | UIKit surface | Why |
+|---|---|---|
+| `Sources/App/StatusBarBridgeHostingController.swift` | `UIHostingController` subclass exposing `preferredStatusBarStyle` | iOS 17 has no native SwiftUI API to coordinate the system status bar style with a morph animation. iOS 18's `.zoom` transition handles this natively, so the bridge is gated to `iOS < 18`. |
+| `Sources/App/Transitions/Morph*.swift` (4 files) | `UIPresentationController` + `UIPercentDrivenInteractiveTransition` + `UIViewControllerAnimatedTransitioning` | Scaffolded for the iOS 17 fallback morph path. Not currently consumed at runtime (iOS 18 `.zoom` is the primary). Retained as belt-and-suspenders for the OS-version split documented in `docs/ADRs.md > ADR-009`. Optional cleanup: delete if iOS 18 minimum gets bumped. |
+| `Sources/DesignSystem/Components/FilterChipRow.swift` | `UIViewRepresentable` wrapping a `CALayer` for the chip selection pulse | `CABasicAnimation` runs CoreAnimation-side (frame-precise, vBlank-aligned) — distinct from SwiftUI's transaction system. Used for a single-frame border-width pulse that reads as a "confirmation ring" on chip selection. |
+| `Sources/DesignSystem/Tokens/Theme.swift` | `UIScreen.main.scale` for `Theme.Spacing.hairline` | `1.0 / UIScreen.main.scale` gives a physical-pixel-crisp hairline width. SwiftUI has no `@Environment(\.displayScale)`-equivalent that's universally accessible from a token file. `UIScreen.main` is deprecated for multi-scene apps; we're single-scene, so it works — but a follow-up would inject scale via environment. |
+| `Sources/ImageCaching/EditorialGradeProcessor.swift` | `UIImage` + `MTKTextureLoader` + Core Image / MPS | Kingfisher's `ImageProcessor` protocol takes `UIImage`, not SwiftUI `Image`. The processor runs the editorial color grade (saturation, contrast lift, gentle warm shift) on cache-miss; both a CoreImage path and a Metal/MPS path are present. |
+| `Sources/Features/HotelDetail/HotelDetailScene.swift` | `CADisplayLink` snap-back driver | The drag-throw dismiss uses a hand-rolled spring integrator driven by `CADisplayLink` so the rubber-band snap-back interpolates at the native display refresh (120 Hz on ProMotion devices). Optional polish — SwiftUI's spring would also work; the CADisplayLink path is documented in `docs/ADRs.md` as a deliberate "supplemental driver" not strictly required. |
 
 ## Folder Tree
 
@@ -116,20 +131,31 @@ ResortPassApp/
 
 ## Testing Strategy
 
-Three layers:
+Two layers (snapshot tests deliberately deferred — see _What I'd do differently_):
 
-1. **Unit tests** — `Tests/ResortPassTests/` covers the reducers (debounce, cancellation, stale-response guard, status transitions) and the decoders (real API response shape, null-coordinate places, missing fields). Run with `make test` or in Xcode.
-2. **Snapshot tests** — swift-snapshot-testing for visual regression on each Status state per screen. The `.preview` clients provide deterministic fixtures.
-3. **Maestro flows** — `.maestro/` directory contains end-to-end interaction tests that drive real taps + assertions against the running simulator. They catch seam bugs (View binding ↔ NavigationStack ↔ VM state) that unit tests can't see. The current suite covers the happy path, both empty states, the clear button, debounce + cancellation behavior, and the null-coord guard.
+1. **Unit tests** — 83 tests across `Tests/`:
+   - `SearchViewModelTests.swift` (11) — reducer behavior
+   - `HotelListingsViewModelTests.swift` (5) — reducer behavior
+   - `SpecComplianceTests.swift` (21) — interview-spec pinning: 500ms debounce timing, cancellation race, stale-response guard, dismiss-no-refetch regression, scenePhase staleness, presentation transitions
+   - `HTTPClientTests.swift` (7) — URLProtocol-stubbed transport: status mapping (2xx/4xx/5xx), non-HTTP response, network unavailable, cancellation cascade
+   - `NetworkingLayerTests.swift` (18) — `Endpoints` URL verbatim vs interview spec (incl. percent-encoding + CJK input) + `ErrorKind` mapping for every URLError case
+   - `PlaceTests.swift` (15) — decoding against real API fixtures (Newport / Brooklyn) + adversarial inputs (id-as-string, vibes-null, products-as-object) + `FailableDecodable` lossy-array coverage
+   - `HotelTests.swift` (6) — Hotel decoder coverage
+   Run with `make test` or in Xcode.
+2. **Maestro flows** — `.maestro/` directory (~80 flows) drives real taps + assertions on a running simulator. Catches seam bugs unit tests can't see. Coverage includes: happy paths, empty/error states, retry recovery, clear button, debounce/cancellation, null-coord guard, non-Latin (CJK) search, dark mode, landscape, AX5 Dynamic Type, scene-phase staleness.
 
 ## Accessibility
 
 - VoiceOver labels on every interactive element (search bar, place rows, retry buttons, back button via the system nav).
-- Dynamic Type respected on every Text view (uses semantic `Font` styles, not fixed sizes — would need a follow-up pass to enforce this rigorously across `Theme.Typography`).
-- `ContentUnavailableView` used for empty + failed states (native iOS 17 component; ships with built-in accessibility traits).
-- Color contrast verified for AA on the default light theme.
+- Hotel cards use `.accessibilityElement(children: .combine)` so VoiceOver reads each card as a single rotor element (`Strings.Accessibility.hotelRowLabel` composes name + rating + distance + price).
+- Section headers use `.accessibilityElement(children: .combine)` + `.accessibilityAddTraits(.isHeader)` so VoiceOver users can rotor-skim section by section.
+- Dynamic Type respected: text fonts use semantic styles (`.caption2`, `.footnote`, `.subheadline`, `.body`, etc.) so layouts scale through `xxLarge` and into the accessibility sizes. SF Symbol icons retain fixed sizes (visual centering).
+- `ContentUnavailableView` used for empty + failed states (native iOS 17 component with built-in accessibility traits).
+- Light/dark mode: every `Theme.Color` token resolves through `Assets.xcassets/Colors/` colorsets with `Any Appearance` + `Dark Appearance` variants. Color contrast verified for WCAG AA on light theme; dark theme contrast is by-token but has not been fully audited.
 
-Honest limitation: the current pass focuses on label coverage and Dynamic Type support is partial. A second pass would lift `Theme.Typography` to use `Font.body` etc. and add explicit `accessibilityElement(children:)` grouping on hotel cards.
+Touch target audit (informal — no AccessibilityInspector run): the filter chip's tap area is ~32pt height before padding lifts it to ~44pt, on the boundary of the HIG 44pt minimum. The clear-search button's `Image` is ~12pt but its containing button extends to ~30pt — also marginal. Both are flagged for a future explicit audit pass.
+
+Limitations honestly acknowledged: no AccessibilitySnapshot integration (regression-catching for labels/traits); no automated VoiceOver navigation order tests; AX5 (largest accessibility size) layout has not been verified visually beyond Maestro flow `76-AX5-search-idle.yaml`.
 
 ## Hotel listings rendering — intentional deviation
 
