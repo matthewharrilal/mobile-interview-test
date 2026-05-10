@@ -77,6 +77,15 @@ struct CompactHotelCard: View {
                             Text("\(currency.symbol)\(Int(price))")
                                 .font(.system(.subheadline, design: .serif).weight(.semibold).monospacedDigit())
                                 .foregroundStyle(Theme.Color.textPrimary)
+                                // Sweep iOS17 #3 — digits roll-and-flip
+                                // when the price changes (currency
+                                // toggle, refreshed listings) instead
+                                // of crossfading. iOS 17+ API; matches
+                                // the detail-scene price treatment so
+                                // the morph reads as a single coherent
+                                // transition rather than a card-fade-
+                                // then-detail-fade sequence.
+                                .contentTransition(.numericText())
                         }
                     }
                 }

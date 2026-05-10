@@ -55,6 +55,17 @@ struct HotelDetailScene: View {
     /// system zoom transition handles arrival natively.
     @State private var contentOpacity: Double = 0
 
+    /// Trigger flag for the staggered text-content arrival sequence.
+    /// Flipped `true` in `.onAppear` so the per-element PhaseAnimator and
+    /// title KeyframeAnimator both advance from their initial (hidden)
+    /// phase to their visible phase. Lives on the scene (not on each
+    /// child modifier) so a single state mutation drives every element's
+    /// arrival in lockstep — staggering comes from per-element delays,
+    /// not from desynchronised triggers. iOS 17+ — both presentation
+    /// styles benefit (overlay mode adds it on top of the morph; pushed
+    /// mode adds the cadence the system `.zoom` transition does not).
+    @State private var contentArrivalTrigger = false
+
     /// Live drag translation on the hero. Drives `dismissProgress` (writer
     /// contract) and the rubber-band offset on the hero itself. Reset on
     /// snap-back; on commit the host's morph-spring drives unwind.
@@ -163,6 +174,12 @@ struct HotelDetailScene: View {
             withAnimation(Theme.Animation.contentReveal.delay(0.16)) {
                 contentOpacity = 1
             }
+            // Sweep iOS17: flip the staggered-arrival trigger so each
+            // text element's PhaseAnimator / KeyframeAnimator advances
+            // from initial (offset+invisible) to visible. Per-element
+            // delays in the modifiers produce the cadence; this single
+            // flip drives them all.
+            contentArrivalTrigger = true
         }
     }
 
@@ -187,6 +204,15 @@ struct HotelDetailScene: View {
         .background(Theme.Color.background.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.thinMaterial, for: .navigationBar)
+        .onAppear {
+            // Sweep iOS17: stagger fires here too. The system `.zoom`
+            // transition only morphs the hero's geometry — it does not
+            // animate text arrival. Flipping the trigger from
+            // `.onAppear` runs the same per-element cadence the overlay
+            // path uses, with no risk of doubling up because zoom
+            // owns geometry, not content drop-in.
+            contentArrivalTrigger = true
+        }
     }
 }
 
@@ -308,6 +334,15 @@ private extension HotelDetailScene {
 // MARK: - Body content
 
 private extension HotelDetailScene {
+    /// Stagger schedule (Sweep iOS17). Five offsets from the lead-in:
+    /// 0 → location eyebrow, 1 → title (keyframes), 2 → rating,
+    /// 3 → product info, 4 → price. 0.07s × 4 ≈ 280ms total spread.
+    /// Centralised so re-tuning the cadence is a single-file change.
+    private func arrivalDelay(_ index: Int) -> Double {
+        Theme.Animation.contentArrivalLeadIn
+            + Theme.Animation.contentArrivalStaggerStep * Double(index)
+    }
+
     @ViewBuilder
     var content: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.s) {
@@ -316,10 +351,24 @@ private extension HotelDetailScene {
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .tracking(1.3)
                     .foregroundStyle(Theme.Color.textTertiary)
+                    // Sweep iOS17 #1 — first staggered element (eyebrow).
+                    .modifier(StaggerArrival(
+                        trigger: contentArrivalTrigger,
+                        staggerDelay: arrivalDelay(0)
+                    ))
             }
             Text(hotel.name)
                 .font(Theme.Typography.editorialDisplay)
                 .foregroundStyle(Theme.Color.textPrimary)
+                // Sweep iOS17 #2 — title gets KeyframeAnimator instead
+                // of a single phase: position settles via spring,
+                // opacity ramps faster on a cubic ease. The asymmetric
+                // timing is what produces the perceived weight that the
+                // user's Image-12 critique called for.
+                .modifier(KeyframeArrival(
+                    trigger: contentArrivalTrigger,
+                    leadIn: arrivalDelay(1)
+                ))
             if let rating = hotel.rating, rating > 0 {
                 HStack(spacing: 6) {
                     StarRating(value: rating, size: 14)
@@ -331,6 +380,10 @@ private extension HotelDetailScene {
                             .foregroundStyle(Theme.Color.textSecondary)
                     }
                 }
+                .modifier(StaggerArrival(
+                    trigger: contentArrivalTrigger,
+                    staggerDelay: arrivalDelay(2)
+                ))
             }
         }
         .padding(.horizontal, Theme.Spacing.l)
@@ -347,18 +400,40 @@ private extension HotelDetailScene {
                 Text(product)
                     .font(.system(.title3, design: .serif).weight(.medium))
                     .foregroundStyle(Theme.Color.textPrimary)
-                if let price = hotel.cheapestPrice {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("from")
-                            .font(.system(.body, design: .serif).italic())
-                            .foregroundStyle(Theme.Color.textTertiary)
-                        Text("\(currency.symbol)\(Int(price))")
-                            .font(.system(.title, design: .serif).weight(.semibold).monospacedDigit())
-                            .foregroundStyle(Theme.Color.textPrimary)
-                    }
-                }
             }
+            // Available-today eyebrow + product name share a stagger
+            // slot — they read as a single editorial group, so a unified
+            // arrival keeps them perceptually together.
+            .modifier(StaggerArrival(
+                trigger: contentArrivalTrigger,
+                staggerDelay: arrivalDelay(3)
+            ))
             .padding(.horizontal, Theme.Spacing.l)
+
+            if let price = hotel.cheapestPrice {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("from")
+                        .font(.system(.body, design: .serif).italic())
+                        .foregroundStyle(Theme.Color.textTertiary)
+                    Text("\(currency.symbol)\(Int(price))")
+                        .font(.system(.title, design: .serif).weight(.semibold).monospacedDigit())
+                        .foregroundStyle(Theme.Color.textPrimary)
+                        // Sweep iOS17 #3 — digits roll-and-flip instead
+                        // of crossfade when the value changes (currency
+                        // switch, dynamic re-fetch). Symbol+amount are
+                        // composed in a single Text so the transition
+                        // applies to the whole numeric string.
+                        .contentTransition(.numericText())
+                }
+                // Price block is its own stagger slot — it's the
+                // "punctuation" of the editorial sentence and lands
+                // last to give it weight.
+                .modifier(StaggerArrival(
+                    trigger: contentArrivalTrigger,
+                    staggerDelay: arrivalDelay(4)
+                ))
+                .padding(.horizontal, Theme.Spacing.l)
+            }
         }
     }
 
@@ -376,6 +451,97 @@ private extension HotelDetailScene {
         .padding(.leading, Theme.Spacing.m)
         .padding(.top, Theme.Spacing.m)
         .accessibilityLabel(Text("Close"))
+    }
+}
+
+// MARK: - Sweep iOS17 — staggered arrival modifiers
+//
+// PhaseAnimator and KeyframeAnimator are iOS 17+; the project's
+// deployment target is iOS 17 so no `#available` guard is needed.
+// Both modifiers are scoped to this file because they're tightly
+// coupled to the detail's arrival cadence; if other surfaces ever
+// need similar staggering, lift them into DesignSystem.
+
+/// Drives a single text element's "drop-in" arrival via PhaseAnimator.
+/// Initial phase: 12pt below + invisible. Visible phase: at-rest +
+/// fully opaque. The `trigger` value is the scene's
+/// `contentArrivalTrigger` flag; flipping it from false → true
+/// advances the animator through the two phases. Per-element timing
+/// comes from `staggerDelay` applied at the animation curve, NOT from
+/// state desynchronisation — so the cadence is deterministic and a
+/// single re-tap produces the same sequence each time.
+///
+/// The 12pt offset distance was chosen to match the existing morph's
+/// vertical resolution: less than that and the drop is invisible,
+/// more than that and the type "falls" rather than "settles" (the
+/// Airbnb reference reads at ~10–14pt).
+private struct StaggerArrival: ViewModifier {
+    let trigger: Bool
+    let staggerDelay: Double
+
+    func body(content: Content) -> some View {
+        content
+            .phaseAnimator([0.0, 1.0], trigger: trigger) { view, phase in
+                view
+                    .opacity(phase)
+                    .offset(y: (1.0 - phase) * 12)
+            } animation: { _ in
+                Theme.Animation.contentArrival.delay(staggerDelay)
+            }
+    }
+}
+
+/// Title-specific arrival driven by KeyframeAnimator. Position and
+/// opacity run on DIFFERENT timing curves so the title "asserts"
+/// (opacity ramps in over ~200ms on a cubic ease) before its position
+/// has fully settled (spring with a slower 450ms duration).
+///
+/// This per-property timing differential is what creates the
+/// "weight distribution" feeling the user's critique kept asking for:
+/// a single Animation curve cannot produce it because every property
+/// shares the curve. KeyframeAnimator's KeyframeTrack-per-property
+/// model is the only declarative way to express this on iOS 17+.
+///
+/// The leading `LinearKeyframe` in each track holds at the initial
+/// value for `leadIn` seconds, achieving the same effect as an
+/// up-front `.delay(...)` (which KeyframeAnimator does not natively
+/// support). When the trigger flips, the keyframes play once.
+private struct KeyframeArrival: ViewModifier {
+    let trigger: Bool
+    let leadIn: Double
+
+    /// Animatable state — KeyframeAnimator interpolates across this.
+    private struct ArrivalValue: Equatable {
+        var offsetY: CGFloat = 12   // initial: below resting position
+        var opacity: Double = 0     // initial: invisible
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .keyframeAnimator(
+                initialValue: ArrivalValue(),
+                trigger: trigger
+            ) { view, value in
+                view
+                    .opacity(value.opacity)
+                    .offset(y: value.offsetY)
+            } keyframes: { _ in
+                // Position: hold at 12pt during lead-in, then a 0.45s
+                // spring resolves to 0. Spring with bounce 0.18 gives a
+                // light settle without overshoot reading as wobble.
+                KeyframeTrack(\.offsetY) {
+                    LinearKeyframe(12, duration: leadIn)
+                    SpringKeyframe(0, duration: 0.45, spring: .smooth(duration: 0.45, extraBounce: 0.18))
+                }
+                // Opacity: hold at 0 during lead-in, then a 0.20s cubic
+                // ease (faster than position) so the title becomes
+                // legible before it has settled — the asymmetry IS the
+                // weight effect.
+                KeyframeTrack(\.opacity) {
+                    LinearKeyframe(0, duration: leadIn)
+                    CubicKeyframe(1.0, duration: 0.20)
+                }
+            }
     }
 }
 

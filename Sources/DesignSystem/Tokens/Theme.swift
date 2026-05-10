@@ -184,5 +184,34 @@ enum Theme {
         /// lockstep with `quickFade` / `surfaceCrossfade` (both 0.20s).
         /// Single source of truth for image-load reveal cadence.
         static let kfFadeDuration: TimeInterval = 0.20
+
+        // MARK: - iOS 17 staggered arrival (Sweep iOS17)
+        //
+        // The detail's text content arrives in a staggered cadence
+        // *after* the matched-geometry / `.zoom` morph settles — the
+        // hero lands first (~150 ms), then a brief beat (~10 ms) lets
+        // the geometry feel grounded, then per-element drop-in begins.
+        // PhaseAnimator drives the individual elements; KeyframeAnimator
+        // runs different timing curves on the title's position vs
+        // opacity (see HotelDetailScene `KeyframeArrival`).
+
+        /// Spring envelope for a single element's arrival. Slightly
+        /// under-damped (0.85) so each line settles with a perceptible
+        /// physical weight rather than easing flat into place — this is
+        /// what produces the Airbnb-reference feeling of type "dropping"
+        /// onto the surface instead of materialising.
+        static let contentArrival = SwiftUI.Animation.spring(response: 0.32, dampingFraction: 0.85)
+
+        /// Lead-in before the first element starts arriving. Aligned to
+        /// the morph spring's geometry settle (response 0.25 ≈ 150 ms)
+        /// plus ~10 ms breathing room — matches the existing
+        /// `contentReveal.delay(0.16)` so surface background and first
+        /// element begin together.
+        static let contentArrivalLeadIn: Double = 0.16
+
+        /// Per-element stagger step. 0.07 × 4 trailing elements ≈ 280 ms
+        /// total spread (per UX-research §6 — Airbnb's text cadence
+        /// runs ~250–300 ms from first line to last).
+        static let contentArrivalStaggerStep: Double = 0.07
     }
 }
