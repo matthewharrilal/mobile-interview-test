@@ -21,7 +21,7 @@ targets:
       - package: Kingfisher
     settings:
       base:
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"

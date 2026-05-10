@@ -54,10 +54,18 @@ struct Place: Equatable, Sendable, Hashable, Identifiable, Codable {
     }
 
     /// Short type label shown alongside place name in search rows.
+    /// "Area" is used for `type == "alias"` because the API surfaces these
+    /// as catalog matches that aren't primary destinations — e.g.
+    /// "Newport, Tennessee" is alias because its day-pass listings live
+    /// under a parent catalog, whereas "Newport, Rhode Island" is its own
+    /// primary city. Earlier "Nearby" wording implied geographic proximity
+    /// to some unspecified anchor, which it isn't ("Newport, Tennessee" is
+    /// not nearby "Newport, California"). "Area" is neutral and accurate
+    /// — it just signals "geographic region matching your query".
     var typeBadge: String {
         switch type {
         case "country": return "Country"
-        case "alias":   return "Nearby"
+        case "alias":   return "Area"
         case "city":    return "City"
         default:        return ""
         }

@@ -23,6 +23,7 @@
 		691463FADA621F0D93ADDC9D /* MorphAnimatedTransitioning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2731B3B522545A975CD5C7A0 /* MorphAnimatedTransitioning.swift */; };
 		6BB058016EEE95E203F75834 /* Place.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53198B5CB0C76A572B82F22 /* Place.swift */; };
 		6D2AE3DBC5686661C1035CBD /* HotelDetailScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4245B1ED045EACE41B95FC16 /* HotelDetailScene.swift */; };
+		7A915C996D1B619DC8B29DE3 /* SpecComplianceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FB380DE15B651E17473908 /* SpecComplianceTests.swift */; };
 		7EDECB5766CEED7926FB9562 /* CardPressStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B01FC824C9E3C19412A909 /* CardPressStyle.swift */; };
 		7F9D707421F20D3CDD5C21AE /* LogClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 707DC5FFD7BF85A428FBA516 /* LogClient.swift */; };
 		80EF7552E6F6968C7F8410D7 /* PlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C98992C941505E0E031B769D /* PlaceTests.swift */; };
@@ -115,6 +116,7 @@
 		D1F3011C8C200A72DF8BBDBC /* HotelImageCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotelImageCarousel.swift; sourceTree = "<group>"; };
 		D50799C31C6BF304E0A4BF1D /* Endpoints.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoints.swift; sourceTree = "<group>"; };
 		D6E5B5FD32A05817E33F4F70 /* ErrorKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorKind.swift; sourceTree = "<group>"; };
+		D8FB380DE15B651E17473908 /* SpecComplianceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecComplianceTests.swift; sourceTree = "<group>"; };
 		DAA1219A9ADE242E6567CE1F /* Strings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Strings.swift; sourceTree = "<group>"; };
 		E53198B5CB0C76A572B82F22 /* Place.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Place.swift; sourceTree = "<group>"; };
 		E59DE1D863BFF0A1579B2D57 /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 				65FFD8F1B22D03D0AE31904D /* HotelTests.swift */,
 				C98992C941505E0E031B769D /* PlaceTests.swift */,
 				58B8BAE00C3534BC871281B4 /* SearchViewModelTests.swift */,
+				D8FB380DE15B651E17473908 /* SpecComplianceTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -514,6 +517,7 @@
 				46FDEC8749BEA964B3263ADD /* HotelTests.swift in Sources */,
 				80EF7552E6F6968C7F8410D7 /* PlaceTests.swift in Sources */,
 				CADA8323064AD86330BBF7EB /* SearchViewModelTests.swift in Sources */,
+				7A915C996D1B619DC8B29DE3 /* SpecComplianceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -619,7 +623,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.resortpass.interview.ResortPass;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -641,7 +645,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.resortpass.interview.ResortPass;
 				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
