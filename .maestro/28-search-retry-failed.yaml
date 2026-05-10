@@ -1,19 +1,18 @@
 appId: com.resortpass.interview.ResortPass
-name: Search retry — tapping Try Again with flag still set re-fails
+name: Search retry — Try Again recovers when failure auto-clears after first call
 tags:
   - states
-  - error
+  - recovery
   - search
   - retry
   - manual-launch
 ---
 # Run via: bash scripts/run-failure-flows.sh
-# (orchestrates -ui-test-fail-search YES launch arg)
+# (orchestrates -ui-test-fail-search YES -ui-test-toggle-recovery-on-retry YES launch args)
 #
-# GAP-DOCUMENTING: Per spec — tapping Try Again while the failure flag is
-# still active will re-fire startSearch and re-fail. There is no way to
-# remove the flag mid-session without process restart, so this flow
-# documents the retry-loop behavior rather than asserting recovery.
+# RECOVERY-PATH: with the toggle-recovery flag set, SearchClient is wired to
+# .failingThenRecovers — first call throws, subsequent calls succeed. Tapping
+# Try Again re-fires startSearch and exits the failed state.
 
 - tapOn: "Search cities, hotels…"
 - inputText: "newport"
@@ -26,9 +25,8 @@ tags:
 
 - tapOn: "Try Again"
 
-# Briefly loading, then re-fails (flag still active)
+# Retry succeeds — failed UI clears, results render.
 - extendedWaitUntil:
-    visible: "Couldn't search"
+    visible: "Newport Beach, California"
     timeout: 5000
-- assertVisible: "Try Again"
-- takeScreenshot: 28-search-retry-still-failed
+- takeScreenshot: 28-search-retry-recovered

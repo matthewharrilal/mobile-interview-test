@@ -71,6 +71,22 @@ extension HotelsClient {
     static let failing = HotelsClient { _ in
         throw NetworkingError.invalidResponse
     }
+
+    /// Fails the first call, then succeeds on every subsequent call.
+    /// Used by Maestro to exercise retry-recovery without restarting the app.
+    static var failingThenRecovers: HotelsClient {
+        let counter = CallCounter()
+        return HotelsClient { _ in
+            if counter.incrementAndGet() == 1 {
+                throw NetworkingError.invalidResponse
+            }
+            return HotelsSearchResponse(
+                hotels: Hotel.previewFixtures,
+                currency: .usd,
+                total: Hotel.previewFixtures.count
+            )
+        }
+    }
 }
 
 // MARK: - Preview

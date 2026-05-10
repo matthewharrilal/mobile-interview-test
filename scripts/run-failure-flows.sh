@@ -112,8 +112,9 @@ trap restore_light EXIT
 run ui-test-fail-search   .maestro/07-search-failed-retry.yaml
 run ui-test-fail-hotels   .maestro/08-hotels-failed-retry.yaml
 run ui-test-empty-hotels  .maestro/09-hotels-empty.yaml
-run ui-test-fail-search   .maestro/28-search-retry-failed.yaml
-run ui-test-fail-hotels   .maestro/29-hotels-retry-failed.yaml
+# Flows 28/29 use the toggle-recovery modifier so retry-success is testable.
+run_with_args "-ui-test-fail-search YES -ui-test-toggle-recovery-on-retry YES" .maestro/28-search-retry-failed.yaml
+run_with_args "-ui-test-fail-hotels YES -ui-test-toggle-recovery-on-retry YES" .maestro/29-hotels-retry-failed.yaml
 
 # ====================================================================
 # DARK-MODE BATCH (10 flows: 32-41) — appearance prelude required.

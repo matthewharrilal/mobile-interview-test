@@ -2,9 +2,12 @@
 // App entry point. Composes the root view with .live client wiring.
 // In DEBUG, supports launch arguments to inject failing/empty clients
 // for Maestro flows that exercise failure-state UIs without taking down staging:
-//   --ui-test-fail-search   → SearchClient.failing
-//   --ui-test-fail-hotels   → HotelsClient.failing
-//   --ui-test-empty-hotels  → HotelsClient returns empty results
+//   --ui-test-fail-search                → SearchClient.failing
+//   --ui-test-fail-hotels                → HotelsClient.failing
+//   --ui-test-empty-hotels               → HotelsClient returns empty results
+//   --ui-test-toggle-recovery-on-retry   → modifier: when paired with a -fail-* flag,
+//                                          uses .failingThenRecovers (fails first call,
+//                                          succeeds afterward) so retry-recovery is testable
 
 import SwiftUI
 
@@ -16,6 +19,9 @@ struct ResortPassApp: App {
         let searchClient: SearchClient = {
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "ui-test-fail-search") {
+                if UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry") {
+                    return .failingThenRecovers
+                }
                 return .failing
             }
             #endif
@@ -49,6 +55,9 @@ struct ResortPassApp: App {
     private var hotelsClientForLaunch: HotelsClient {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "ui-test-fail-hotels") {
+            if UserDefaults.standard.bool(forKey: "ui-test-toggle-recovery-on-retry") {
+                return .failingThenRecovers
+            }
             return .failing
         }
         if UserDefaults.standard.bool(forKey: "ui-test-empty-hotels") {

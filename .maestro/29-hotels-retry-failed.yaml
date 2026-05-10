@@ -1,17 +1,18 @@
 appId: com.resortpass.interview.ResortPass
-name: Hotels retry — tapping Try Again with flag still set re-fails
+name: Hotels retry — Try Again recovers when failure auto-clears after first call
 tags:
   - states
-  - error
+  - recovery
   - hotels
   - retry
   - manual-launch
 ---
 # Run via: bash scripts/run-failure-flows.sh
-# (orchestrates -ui-test-fail-hotels YES launch arg)
+# (orchestrates -ui-test-fail-hotels YES -ui-test-toggle-recovery-on-retry YES launch args)
 #
-# GAP-DOCUMENTING: Same as flow 28 — Try Again with launch flag still
-# active re-fires the load and re-fails. Documents retry-loop, not recovery.
+# RECOVERY-PATH: with the toggle-recovery flag set, HotelsClient is wired to
+# .failingThenRecovers — first call throws, subsequent calls succeed. Tapping
+# Try Again re-fires the load and the listings render.
 
 - tapOn: "Search cities, hotels…"
 - inputText: "newport"
@@ -29,9 +30,8 @@ tags:
 
 - tapOn: "Try Again"
 
-# Loading skeleton, then re-fails (flag still active)
+# Retry succeeds — failed UI clears, hotels render.
 - extendedWaitUntil:
-    visible: "Couldn't load hotels"
+    visible: "TWA Hotel"
     timeout: 8000
-- assertVisible: "Try Again"
-- takeScreenshot: 29-hotels-retry-still-failed
+- takeScreenshot: 29-hotels-retry-recovered

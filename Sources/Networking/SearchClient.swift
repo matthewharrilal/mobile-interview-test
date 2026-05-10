@@ -45,6 +45,31 @@ extension SearchClient {
     static let failing = SearchClient { _ in
         throw NetworkingError.invalidResponse
     }
+
+    /// Fails the first call, then succeeds on every subsequent call.
+    /// Used by Maestro to exercise retry-recovery without restarting the app.
+    static var failingThenRecovers: SearchClient {
+        let counter = CallCounter()
+        return SearchClient { query in
+            if counter.incrementAndGet() == 1 {
+                throw NetworkingError.invalidResponse
+            }
+            return Place.fixturesMatching(query)
+        }
+    }
+}
+
+/// Thread-safe call counter used by the `failingThenRecovers` test variants.
+final class CallCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count: Int = 0
+
+    func incrementAndGet() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        count += 1
+        return count
+    }
 }
 
 // MARK: - Preview
