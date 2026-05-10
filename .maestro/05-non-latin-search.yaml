@@ -1,0 +1,21 @@
+appId: com.resortpass.interview.ResortPass
+---
+# P2 #30 — Verify the search field accepts non-Latin input (CJK in this
+# case) without crashing or degrading layout, and that the autocomplete
+# query parameter is correctly UTF-8 percent-encoded for the staging API.
+#
+# This flow is the empirical complement to
+# `NetworkingLayerTests.test_placesAutocompleteURL_acceptsNonLatinTerms`.
+- launchApp:
+    clearState: true
+- tapOn: "Search cities, hotels…"
+- inputText: "東京"
+- extendedWaitUntil:
+    visible: "No places found"
+    timeout: 8000
+- assertVisible: "No places found"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 8000
+- assertVisible: "Newport Beach, California"
