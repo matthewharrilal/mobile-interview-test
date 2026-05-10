@@ -21,6 +21,19 @@ struct SearchView: View {
         .navigationTitle(Strings.Search.navTitle)
         .navigationBarTitleDisplayMode(.inline)
         .scrollDismissesKeyboard(.immediately)
+        // F12-05: in landscape (and any compact-height layout), the on-screen
+        // keyboard can occlude the failed/empty state's primary CTA ("Try Again").
+        // Resign first responder when entering .failed or .empty so the recovery
+        // affordance is reachable without requiring the user to discover an
+        // undocumented swipe-to-dismiss gesture.
+        .onChange(of: viewModel.state.status) { _, newStatus in
+            switch newStatus {
+            case .failed, .empty:
+                searchFocused = false
+            case .idle, .loading, .loaded:
+                break
+            }
+        }
     }
 }
 
@@ -198,24 +211,38 @@ private extension SearchView {
     }
 
     var emptyState: some View {
-        ContentUnavailableView(
-            Strings.Search.emptyHeadline,
-            systemImage: Theme.Icon.search,
-            description: Text(String(format: Strings.Search.emptyDescriptionFormat, viewModel.state.query))
-        )
+        // F12-05: wrap in a ScrollView so the content remains reachable when
+        // the keyboard is shown (e.g. landscape / compact-height). Pairs with
+        // .scrollDismissesKeyboard(.immediately) on the parent VStack — any
+        // user-driven scroll also dismisses the keyboard.
+        ScrollView {
+            ContentUnavailableView(
+                Strings.Search.emptyHeadline,
+                systemImage: Theme.Icon.search,
+                description: Text(String(format: Strings.Search.emptyDescriptionFormat, viewModel.state.query))
+            )
+            .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
+        }
         .transition(.opacity)
     }
 
     func failedState(_ message: String) -> some View {
-        ContentUnavailableView {
-            Label(Strings.Search.failedHeadline, systemImage: Theme.Icon.warning)
-                .foregroundStyle(Theme.Color.danger)
-        } description: {
-            Text(message)
-        } actions: {
-            Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
-                .buttonStyle(.borderedProminent)
-                .tint(Theme.Color.accent)
+        // F12-05: wrap in a ScrollView so the "Try Again" CTA is reachable even
+        // if the keyboard re-appears. The .onChange handler in `body` also
+        // resigns first responder on entering .failed so the CTA is visible
+        // immediately without requiring the user to scroll.
+        ScrollView {
+            ContentUnavailableView {
+                Label(Strings.Search.failedHeadline, systemImage: Theme.Icon.warning)
+                    .foregroundStyle(Theme.Color.danger)
+            } description: {
+                Text(message)
+            } actions: {
+                Button(Strings.Search.tryAgain) { viewModel.send(.retryTapped) }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.Color.accent)
+            }
+            .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
         }
         .transition(.opacity)
     }
@@ -237,8 +264,15 @@ private extension SearchView {
             .buttonStyle(.borderedProminent)
             .tint(Theme.Color.accent)
         }
+        .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
         .transition(.opacity)
     }
+
+    /// Minimum content height for failed/empty states. Small enough that the
+    /// CTA fits above the keyboard in landscape compact-height (~393pt tall),
+    /// so even if focus returns to the search field the button remains
+    /// reachable via a short scroll.
+    var keyboardSafeMinHeight: CGFloat { 280 }
 }
 
 // MARK: - Accessibility
