@@ -167,7 +167,7 @@ private extension HotelListingsView {
         }
         .coordinateSpace(name: "scroll")
         .refreshable { viewModel.send(.retryTapped) }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
         .ignoresSafeArea(edges: .top)         // hero bleeds behind the nav bar
     }
 
@@ -190,7 +190,7 @@ private extension HotelListingsView {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.l)
             Button {
-                withAnimation(.snappy(duration: 0.25)) {
+                withAnimation(Theme.Animation.selectionFeedback) {
                     selectedFilter = .all
                 }
             } label: {
@@ -211,7 +211,7 @@ private extension HotelListingsView {
         .padding(.horizontal, Theme.Spacing.l)
         .padding(.bottom, Theme.Spacing.xl)
         .frame(maxWidth: .infinity)
-        .transition(.opacity.combined(with: .move(edge: .top)))
+        .transition(.opacity.combined(with: .move(edge: .top)).animation(Theme.Animation.surfaceCrossfade))
         .accessibilityElement(children: .combine)
     }
 
@@ -408,7 +408,7 @@ private extension HotelListingsView {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 
     func failedState(_ message: String) -> some View {
@@ -422,7 +422,7 @@ private extension HotelListingsView {
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.Color.accent)
         }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 }
 

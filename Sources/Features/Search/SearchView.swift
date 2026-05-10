@@ -115,7 +115,7 @@ private extension SearchView {
         }
         .padding(.horizontal, Theme.Spacing.l)
         .accessibilityElement(children: .combine)
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .transition(.opacity.combined(with: .move(edge: .bottom)).animation(Theme.Animation.surfaceCrossfade))
     }
 
     var loadingState: some View {
@@ -172,7 +172,7 @@ private extension SearchView {
             .padding(.horizontal, Theme.Spacing.m)
             .padding(.vertical, Theme.Spacing.xs)
         }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 
     func placeRow(_ place: Place) -> some View {
@@ -223,7 +223,7 @@ private extension SearchView {
             )
             .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
         }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 
     func failedState(_ message: String) -> some View {
@@ -244,7 +244,7 @@ private extension SearchView {
             }
             .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
         }
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 
     /// Distinct from `failedState`: the user picked a place we can't navigate to
@@ -265,7 +265,7 @@ private extension SearchView {
             .tint(Theme.Color.accent)
         }
         .frame(maxWidth: .infinity, minHeight: keyboardSafeMinHeight)
-        .transition(.opacity)
+        .transition(.opacity.animation(Theme.Animation.surfaceCrossfade))
     }
 
     /// Minimum content height for failed/empty states. Small enough that the

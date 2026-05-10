@@ -75,7 +75,7 @@ struct HotelDetailScene: View {
             // the timing identical to the prior `Task.sleep(160ms)` while
             // removing the interruption race (Phase A surgical fix —
             // structural state-bound coordination is Phase B).
-            withAnimation(.easeOut(duration: 0.25).delay(0.16)) {
+            withAnimation(Theme.Animation.contentReveal.delay(0.16)) {
                 contentOpacity = 1
             }
         }
@@ -142,7 +142,7 @@ private extension HotelDetailScene {
                 } else {
                     // Rubber-band snap-back — both <100pt and 100–200pt
                     // bands cancel. Spring back to rest.
-                    withAnimation(.interpolatingSpring(stiffness: 200, damping: 20)) {
+                    withAnimation(Theme.Animation.snapBack) {
                         dragTranslation = 0
                         dismissProgress = 0
                     }

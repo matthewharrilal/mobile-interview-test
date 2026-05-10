@@ -10,7 +10,7 @@ struct CardPressStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             // Tighter, smoother release — no overshoot bounce that would
             // otherwise compete with the morph spring envelope on tap.
-            .animation(.spring(response: 0.20, dampingFraction: 0.92), value: configuration.isPressed)
+            .animation(Theme.Animation.pressFeedback, value: configuration.isPressed)
             .sensoryFeedback(.selection, trigger: configuration.isPressed)
     }
 }

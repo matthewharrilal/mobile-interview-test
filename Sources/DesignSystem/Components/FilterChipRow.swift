@@ -16,7 +16,7 @@ struct FilterChipRow: View {
                         filter: filter,
                         isSelected: filter == selected,
                         action: {
-                            withAnimation(.snappy(duration: 0.25)) { selected = filter }
+                            withAnimation(Theme.Animation.selectionFeedback) { selected = filter }
                         }
                     )
                 }

@@ -13,6 +13,10 @@ struct CachedAsyncImage: View {
         KFImage(url)
             .setProcessor(EditorialGradeProcessor())
             .placeholder { Color.gray.opacity(0.15) }
+            // Kingfisher's `.fade(duration:)` is a CATransition wrapper and
+            // can't literally consume a SwiftUI `Animation`, but the duration
+            // is held to `Theme.Animation.quickFade`'s 0.2s envelope so image
+            // reveals match the rest of the cadence. Tune both together.
             .fade(duration: 0.2)
             .cancelOnDisappear(true)
             .resizable()
