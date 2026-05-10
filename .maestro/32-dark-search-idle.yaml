@@ -23,7 +23,7 @@ tags:
 - launchApp:
     clearState: true
 
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - assertVisible: "Where are you headed?"
 - assertVisible: "Search cities, hotels…"
 - takeScreenshot: 32-dark-search-idle

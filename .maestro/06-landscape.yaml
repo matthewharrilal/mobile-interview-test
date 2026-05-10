@@ -9,7 +9,7 @@ tags:
 
 # Idle in landscape
 - setOrientation: LANDSCAPE_RIGHT
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - assertVisible: "Where are you headed?"
 - takeScreenshot: 06-landscape-search-idle
 

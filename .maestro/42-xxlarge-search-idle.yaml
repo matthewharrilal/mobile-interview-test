@@ -17,7 +17,7 @@ tags:
     arguments:
       "-UIPreferredContentSizeCategoryName": "UICTContentSizeCategoryXXL"
 
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - assertVisible: "Where are you headed?"
 - assertVisible: "Search cities, hotels…"
 - takeScreenshot: 42-xxl-search-idle

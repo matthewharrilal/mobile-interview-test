@@ -14,7 +14,7 @@ tags:
     clearState: true
 
 - assertVisible: "Where are you headed?"
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 
 # None of the six curated destination labels should appear on idle Search.
 - assertNotVisible: "Miami"

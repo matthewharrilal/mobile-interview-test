@@ -15,7 +15,7 @@ tags:
 - launchApp:
     clearState: true
 
-- assertVisible: "Pokédex"
+- assertVisible: "Day Passes"
 - tapOn: "Search cities, hotels…"
 - inputText: "newport"
 - extendedWaitUntil:

@@ -32,7 +32,7 @@ tags:
 - waitForAnimationToEnd:
     timeout: 1500
 
-# Back on Search — Pokédex nav title visible iff coord landed on the chevron.
-# If "Pokédex" is NOT visible, calibration has drifted.
-- assertVisible: "Pokédex"
+# Back on Search — Day Passes nav title visible iff coord landed on the chevron.
+# If "Day Passes" is NOT visible, calibration has drifted.
+- assertVisible: "Day Passes"
 - takeScreenshot: 80-coord-back-confirmed
