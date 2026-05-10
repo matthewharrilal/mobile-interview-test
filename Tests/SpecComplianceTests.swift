@@ -253,6 +253,93 @@ final class SpecComplianceTests: XCTestCase {
         }
     }
 
+    // MARK: - HotelListings: scene-phase staleness policy
+
+    func test_hotelListings_sceneDidBecomeActive_underThreshold_doesNotRefetch() async {
+        // Pinning: if the user backgrounds briefly (< 5 min), returning to
+        // foreground keeps the loaded data — no skeleton flash, no extra
+        // network call. The .sceneDidBecomeActive intent gates on
+        // elapsed > Networking.Constants.listingsStaleThreshold (300s).
+        var calls = 0
+        let client = HotelsClient { _ in
+            calls += 1
+            return HotelsSearchResponse(hotels: Hotel.previewFixtures, currency: .usd, total: 3)
+        }
+        var fakeNow = Date()
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(
+            location: location,
+            client: client,
+            logger: .silent,
+            currentDate: { fakeNow }
+        )
+        vm.send(.appeared)
+        try? await Task.sleep(for: .milliseconds(300))
+        guard case .loaded = vm.state.status else { XCTFail("Setup: expected .loaded"); return }
+        XCTAssertEqual(calls, 1, "Phase 1: first appearance fetched once")
+
+        // Simulate 60 seconds of backgrounding — well under the 5min threshold.
+        fakeNow = fakeNow.addingTimeInterval(60)
+        vm.send(.sceneDidBecomeActive)
+        try? await Task.sleep(for: .milliseconds(100))
+
+        XCTAssertEqual(calls, 1, "Brief background (< threshold) must NOT refetch")
+        if case .loaded = vm.state.status { } else {
+            XCTFail("Brief background must preserve .loaded, got \(vm.state.status)")
+        }
+    }
+
+    func test_hotelListings_sceneDidBecomeActive_overThreshold_refetches() async {
+        // Conjugate: when elapsed time exceeds the threshold, the freshness
+        // policy MUST trigger a refetch so the user doesn't see stale
+        // availability / pricing after a long background.
+        var calls = 0
+        let client = HotelsClient { _ in
+            calls += 1
+            return HotelsSearchResponse(hotels: Hotel.previewFixtures, currency: .usd, total: 3)
+        }
+        var fakeNow = Date()
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(
+            location: location,
+            client: client,
+            logger: .silent,
+            currentDate: { fakeNow }
+        )
+        vm.send(.appeared)
+        try? await Task.sleep(for: .milliseconds(300))
+        guard case .loaded = vm.state.status else { XCTFail("Setup: expected .loaded"); return }
+        XCTAssertEqual(calls, 1)
+
+        // Simulate 6 minutes of backgrounding (threshold is 5 min).
+        fakeNow = fakeNow.addingTimeInterval(360)
+        vm.send(.sceneDidBecomeActive)
+        try? await Task.sleep(for: .milliseconds(300))
+
+        XCTAssertEqual(calls, 2, "Background > threshold MUST refetch on return")
+        if case .loaded = vm.state.status { } else {
+            XCTFail("Expected .loaded after refresh, got \(vm.state.status)")
+        }
+    }
+
+    func test_hotelListings_sceneDidBecomeActive_whenNotLoaded_isNoop() async {
+        // .sceneDidBecomeActive must NOT trigger a fetch when we're in
+        // .idle / .loading / .empty / .failed — only .loaded data can be
+        // "stale." Other statuses are handled by .appeared / .retryTapped.
+        var calls = 0
+        let client = HotelsClient { _ in
+            calls += 1
+            return HotelsSearchResponse(hotels: [], currency: .usd, total: 0)
+        }
+        let location = makePlace(type: "city", lat: 40.7, lon: -73.7)
+        let vm = HotelListingsViewModel(location: location, client: client, logger: .silent)
+
+        // VM is in .idle. Scene activation should be a no-op.
+        vm.send(.sceneDidBecomeActive)
+        try? await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(calls, 0, ".sceneDidBecomeActive must not fetch from .idle")
+    }
+
     func test_hotelListings_filterChanged_preservesLoadedHotels() async {
         // Filter changes must apply to the existing loaded data — they
         // must NOT trigger a re-fetch (that's a state-mutation, not a

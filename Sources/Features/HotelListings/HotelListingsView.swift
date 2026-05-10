@@ -18,6 +18,12 @@ struct HotelListingsView: View {
     @State private var viewModel: HotelListingsViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    /// Backgrounded-data freshness: when the scene returns from background,
+    /// the VM checks `fetchedAt` against `Networking.Constants.listingsStaleThreshold`
+    /// (5 min) and refetches if the loaded data is stale. `.onAppear` does
+    /// not fire on scenePhase changes, so this is the dedicated freshness
+    /// hook.
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Bridge to the custom `UIHostingController` owning
     /// `preferredStatusBarStyle`. Invoked on the iOS 17 fallback morph
@@ -165,6 +171,14 @@ struct HotelListingsView: View {
         // 0.3s easeInOut (cohesion-rendering-pipeline N-1 fix).
         .animation(Theme.Animation.morphSpring, value: viewModel.state.presentation)
         .onAppear { viewModel.send(.appeared) }
+        .onChange(of: scenePhase) { _, newPhase in
+            // Refresh stale data on return to foreground. The VM gates on
+            // `fetchedAt` so a quick app-switch (under threshold) is a
+            // no-op — only longer backgrounds trigger a refetch.
+            if newPhase == .active {
+                viewModel.send(.sceneDidBecomeActive)
+            }
+        }
         .onChange(of: selectedFilter) { _, new in
             withAnimation(Theme.Animation.selectionFeedback) {
                 viewModel.send(.filterChanged(new))

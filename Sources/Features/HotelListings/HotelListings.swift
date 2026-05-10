@@ -40,6 +40,11 @@ struct HotelListingsState: Equatable, Sendable {
         var hotels: [Hotel]
         var currency: Currency
         var activeFilter: Filter
+        /// Wall-clock time the hotels response landed. Read by the
+        /// staleness check on scene re-activation so we can decide
+        /// whether to refresh stale data (see
+        /// `HotelListingsIntent.sceneDidBecomeActive`).
+        var fetchedAt: Date
 
         /// Filtered + sectioned hotels. Drives the curated section layout
         /// (Top picks, Within walking distance, etc.) instead of one flat list.
@@ -50,10 +55,11 @@ struct HotelListingsState: Equatable, Sendable {
         /// `hotels` or `activeFilter` mutates.
         private(set) var sections: [Section]
 
-        init(hotels: [Hotel], currency: Currency, activeFilter: Filter) {
+        init(hotels: [Hotel], currency: Currency, activeFilter: Filter, fetchedAt: Date = Date()) {
             self.hotels = hotels
             self.currency = currency
             self.activeFilter = activeFilter
+            self.fetchedAt = fetchedAt
             self.sections = Self.buildSections(hotels: hotels, activeFilter: activeFilter)
         }
 
@@ -195,6 +201,14 @@ enum HotelListingsIntent: Sendable {
     /// Drag-progress update during the swipe-down dismiss (T-002 will write
     /// this from the DragGesture). 0 = fully expanded, 1 = dismiss complete.
     case dragProgressChanged(progress: CGFloat)
+
+    /// Fired when the SwiftUI `@Environment(\.scenePhase)` transitions to
+    /// `.active`. The reducer compares `fetchedAt` to the staleness
+    /// threshold and triggers a background refresh if the loaded data is
+    /// older than `Networking.Constants.listingsStaleThreshold`. Idle /
+    /// loading / empty / failed statuses are no-ops here — `.appeared`
+    /// already covers those.
+    case sceneDidBecomeActive
 }
 
 // MARK: - ViewModel
@@ -206,16 +220,22 @@ final class HotelListingsViewModel {
 
     private let client: HotelsClient
     private let logger: LogClient
+    /// Injectable clock for the freshness check. Production uses `Date.init`;
+    /// tests pass a closure that returns a controlled "now" so the staleness
+    /// policy can be exercised without sleeping for 5 minutes.
+    private let currentDate: @MainActor () -> Date
     private var fetchTask: Task<Void, Never>?
 
     init(
         location: Place,
         client: HotelsClient = .preview,
-        logger: LogClient = .silent
+        logger: LogClient = .silent,
+        currentDate: @escaping @MainActor () -> Date = { Date() }
     ) {
         self.state = HotelListingsState(location: location, status: .idle)
         self.client = client
         self.logger = logger
+        self.currentDate = currentDate
     }
 
     func send(_ intent: HotelListingsIntent) {
@@ -261,6 +281,17 @@ final class HotelListingsViewModel {
             state.dismissProgress = 0
         case .dragProgressChanged(let progress):
             state.dismissProgress = progress
+
+        case .sceneDidBecomeActive:
+            // Staleness policy: if the user backgrounded briefly we keep
+            // the loaded data (the .appeared idempotency guard already
+            // prevents skeleton-flash on dismiss return). If the elapsed
+            // time exceeds `listingsStaleThreshold` (5min), the data may
+            // no longer reflect availability / pricing — refresh.
+            guard case .loaded(let loaded) = state.status else { return }
+            let elapsed = currentDate().timeIntervalSince(loaded.fetchedAt)
+            guard elapsed > Networking.Constants.listingsStaleThreshold else { return }
+            startFetch()
         }
     }
 
@@ -278,7 +309,8 @@ final class HotelListingsViewModel {
                     self.state.status = .loaded(.init(
                         hotels: response.hotels,
                         currency: response.currency,
-                        activeFilter: .all
+                        activeFilter: .all,
+                        fetchedAt: self.currentDate()
                     ))
                     // Window A: warm cold cache for the first 30 hotel cards
                     // so the morph hot path doesn't decode on demand.
