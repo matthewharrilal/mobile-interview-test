@@ -45,7 +45,7 @@ struct HotelImageCarousel: View {
                         .placeholder {
                             BrandedImagePlaceholder()
                         }
-                        .fade(duration: 0.25)
+                        .fade(duration: Theme.Animation.kfFadeDuration)
                         .cancelOnDisappear(true)
                         .resizable()
                         .scaledToFill()

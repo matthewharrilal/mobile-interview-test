@@ -158,5 +158,12 @@ enum Theme {
         /// Heavier-damped interpolating spring — the user already saw the
         /// movement, so no overshoot is needed on return.
         static let snapBack = SwiftUI.Animation.interpolatingSpring(stiffness: 200, damping: 20)
+
+        /// KFImage's `.fade(duration:)` takes a `Double` and runs through
+        /// `CATransition`, which cannot consume a SwiftUI `Animation`.
+        /// Use this constant so every Kingfisher call site stays in
+        /// lockstep with `quickFade` / `surfaceCrossfade` (both 0.20s).
+        /// Single source of truth for image-load reveal cadence.
+        static let kfFadeDuration: TimeInterval = 0.20
     }
 }

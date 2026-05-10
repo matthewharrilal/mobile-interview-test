@@ -42,8 +42,13 @@ struct EditorialGradeProcessor: ImageProcessor {
         controls.setValue(1.04, forKey: kCIInputContrastKey)
         controls.setValue(0.0, forKey: kCIInputBrightnessKey)
 
+        // Render into Display P3 so iPhone Pro's wider gamut isn't clipped
+        // back to sRGB. `createCGImage` defaults to sRGB; an explicit P3
+        // colorspace closes the color-space dimension gap (D16) and keeps
+        // the editorial grade saturated through the wide-gamut pipeline.
+        let p3 = CGColorSpace(name: CGColorSpace.displayP3)
         guard let final = controls.outputImage,
-              let outputCG = Self.context.createCGImage(final, from: ci.extent) else {
+              let outputCG = Self.context.createCGImage(final, from: ci.extent, format: .RGBA8, colorSpace: p3) else {
             return image
         }
         return UIImage(cgImage: outputCG, scale: image.scale, orientation: image.imageOrientation)

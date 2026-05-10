@@ -4,6 +4,7 @@
 
 import Foundation
 import CoreGraphics
+import Kingfisher
 
 // MARK: - State
 
@@ -233,6 +234,18 @@ final class HotelListingsViewModel {
             }
         case .cardTapped(let hotel, let sourceID):
             state.presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
+            // Window B: warm the next 4 carousel images so the detail's
+            // swipeable carousel doesn't placeholder-flicker on first swipe.
+            // Processor MUST match the call-site processor in
+            // HotelImageCarousel.swift (default-init EditorialGradeProcessor)
+            // so the prefetched cache key matches the on-screen lookup.
+            let nextImageURLs = Array(hotel.imageURLs.dropFirst().prefix(4))
+            if !nextImageURLs.isEmpty {
+                ImagePrefetcher(
+                    urls: nextImageURLs,
+                    options: [.processor(EditorialGradeProcessor())]
+                ).start()
+            }
         case .detailDismissed:
             state.presentation = .browsing
             state.dismissProgress = 0
@@ -257,6 +270,19 @@ final class HotelListingsViewModel {
                         currency: response.currency,
                         activeFilter: .all
                     ))
+                    // Window A: warm cold cache for the first 30 hotel cards
+                    // so the morph hot path doesn't decode on demand.
+                    // Processor MUST match the call-site processor in
+                    // CachedAsyncImage.swift / HotelImageCarousel.swift
+                    // (default-init EditorialGradeProcessor) so the
+                    // prefetched cache key matches the on-screen lookup.
+                    let urls = response.hotels.prefix(30).compactMap(\.imageURL)
+                    if !urls.isEmpty {
+                        ImagePrefetcher(
+                            urls: urls,
+                            options: [.processor(EditorialGradeProcessor())]
+                        ).start()
+                    }
                 }
             } catch is CancellationError {
                 // silent
