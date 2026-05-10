@@ -72,7 +72,7 @@ struct HotelListingsView: View {
                     sourceID: sourceID,
                     dismissProgress: $dismissProgress,
                     onDismiss: {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
+                        withAnimation(Theme.Animation.morphSpring) {
                             presentation = .browsing
                             dismissProgress = 0
                         }
@@ -301,12 +301,7 @@ private extension HotelListingsView {
                             hotel: hotel,
                             currency: currency,
                             onTap: {
-                                // Near-critical spring (response 0.25, damping
-                                // 0.95) gives the ~150ms geometry duration the
-                                // brief calls for, with no overshoot — the
-                                // hero lands clean before the content fade-in
-                                // beat starts inside HotelDetailScene.
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
+                                withAnimation(Theme.Animation.morphSpring) {
                                     presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
                                 }
                             }
@@ -314,7 +309,7 @@ private extension HotelListingsView {
                         .matchedGeometryEffect(id: sourceID, in: ns)
                         .contextMenu {
                             Button {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.95)) {
+                                withAnimation(Theme.Animation.morphSpring) {
                                     presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
                                 }
                             } label: {

@@ -26,10 +26,8 @@ enum Theme {
         static let border = SwiftUI.Color("border", bundle: .main)
         /// Brand accent — links, primary buttons, focus ring.
         static let accent = SwiftUI.Color("accent", bundle: .main)
-        /// Semantic status colors.
+        /// Semantic status — destructive actions, errors.
         static let danger = SwiftUI.Color("danger", bundle: .main)
-        static let warning = SwiftUI.Color("warning", bundle: .main)
-        static let success = SwiftUI.Color("success", bundle: .main)
     }
 
     // MARK: - Spacing (8pt grid)
@@ -40,16 +38,13 @@ enum Theme {
         static let m: CGFloat = 16
         static let l: CGFloat = 24
         static let xl: CGFloat = 32
-        static let xxl: CGFloat = 48
     }
 
     // MARK: - Corner Radius
 
     enum CornerRadius {
         static let s: CGFloat = 6
-        static let m: CGFloat = 8
         static let l: CGFloat = 12
-        static let pill: CGFloat = 9999
     }
 
     // MARK: - Typography (Dynamic Type aware)
@@ -59,20 +54,13 @@ enum Theme {
     /// Editorial typography: hotel + place names use Playfair Display
     /// (bundled OFL-licensed display serif). Supporting copy stays in SF Pro.
     enum Typography {
-        static let titleL = Font.largeTitle.weight(.medium)
-        static let titleM = Font.title2.weight(.medium)
-        static let titleS = Font.headline
         static let body = Font.body
-        static let bodyEmphasised = Font.body.weight(.medium)
-        static let footnote = Font.footnote
-        static let caption = Font.caption
 
         /// Editorial display serif (Playfair Display) for hotel + place names.
         /// Falls back to system serif (.system(...,design: .serif)) if the font
         /// fails to load, so the layout always renders.
         static let editorialL = Font.custom("PlayfairDisplay-Regular", size: 24, relativeTo: .title2).weight(.medium)
         static let editorialM = Font.custom("PlayfairDisplay-Regular", size: 20, relativeTo: .title3).weight(.medium)
-        static let editorialS = Font.custom("PlayfairDisplay-Regular", size: 17, relativeTo: .headline).weight(.medium)
         static let editorialDisplay = Font.custom("PlayfairDisplay-Regular", size: 28, relativeTo: .title).weight(.semibold)
 
         /// Refined supporting copy — uppercase metadata + numeric prices.
@@ -107,8 +95,6 @@ enum Theme {
             x: CGFloat(0),
             y: CGFloat(4)
         )
-        /// Legacy — kept so older call-sites compile.
-        static let card = cardAmbient
     }
 
     // MARK: - Icons
@@ -119,10 +105,19 @@ enum Theme {
         static let search = "magnifyingglass"
         static let clearField = "xmark.circle.fill"
         static let chevronRight = "chevron.right"
-        static let mapPin = "mappin.circle.fill"
         static let star = "star.fill"
-        static let vibe = "sparkles"
         static let warning = "exclamationmark.triangle"
         static let houseSlash = "house.slash"
+    }
+
+    // MARK: - Animation
+
+    /// Named animation curves. Centralized so transitions stay consistent
+    /// across the app and tuning happens in one place.
+    enum Animation {
+        /// Card → detail morph spring. Near-critical (response 0.25, damping
+        /// 0.95) gives a ~150ms geometry duration with no overshoot — the hero
+        /// lands clean before the content fade-in beat starts in the detail.
+        static let morphSpring = SwiftUI.Animation.spring(response: 0.25, dampingFraction: 0.95)
     }
 }
