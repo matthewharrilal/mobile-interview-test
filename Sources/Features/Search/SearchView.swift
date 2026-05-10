@@ -28,7 +28,7 @@ struct SearchView: View {
         // undocumented swipe-to-dismiss gesture.
         .onChange(of: viewModel.state.status) { _, newStatus in
             switch newStatus {
-            case .failed, .empty:
+            case .failed, .failedNullCoords, .empty:
                 searchFocused = false
             case .idle, .loading, .loaded:
                 break
