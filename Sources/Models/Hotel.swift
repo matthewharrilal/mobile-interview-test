@@ -105,10 +105,35 @@ struct Hotel: Equatable, Sendable, Hashable, Identifiable, Codable {
         self.cheapestPrice = products?.compactMap(\.price).min()
     }
 
+    /// Mirrors `init(from:)` so encode→decode round-trips preserve every field.
+    /// Writes the wire shape (snake_case keys, nested `vibes`/`image`/`products`)
+    /// not the in-memory shape, so the same `JSONDecoder` re-hydrates an equal Hotel.
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
+        try container.encodeIfPresent(imageURL?.absoluteString, forKey: .desktopImg)
+        if !imageURLs.isEmpty {
+            let wireImages = imageURLs.map { ImageWire(picture: .init(url: $0.absoluteString, results: nil, details: nil)) }
+            try container.encode(wireImages, forKey: .image)
+        }
+        try container.encodeIfPresent(rating, forKey: .rating)
+        try container.encode(reviewCount, forKey: .reviews)
+        try container.encodeIfPresent(hotelStar, forKey: .hotelStar)
+        try container.encodeIfPresent(distanceMiles, forKey: .distanceMiles)
+        try container.encodeIfPresent(distanceText, forKey: .distanceText)
+        try container.encodeIfPresent(cityName, forKey: .cityName)
+        try container.encodeIfPresent(stateCode, forKey: .stateCode)
+        try container.encodeIfPresent(productName, forKey: .productName)
+        if primaryVibe != nil {
+            var vibesContainer = container.nestedContainer(keyedBy: VibesKeys.self, forKey: .vibes)
+            try vibesContainer.encodeIfPresent(primaryVibe, forKey: .primary)
+        }
+        if let cheapestPrice {
+            // Decoder derives cheapestPrice as min(products[].price); encode a
+            // single product so the round-trip yields the same minimum.
+            try container.encode([Product(price: cheapestPrice)], forKey: .products)
+        }
     }
 
     /// Display location: "Costa Mesa, CA" or just city if state unknown.
@@ -154,20 +179,20 @@ struct Hotel: Equatable, Sendable, Hashable, Identifiable, Codable {
         case secondary
     }
 
-    private struct Product: Decodable {
+    private struct Product: Codable {
         let price: Double?
     }
 
-    private struct ImageWire: Decodable {
+    private struct ImageWire: Codable {
         let picture: PictureWire?
 
-        struct PictureWire: Decodable {
+        struct PictureWire: Codable {
             let url: String?
             let results: SizedURL?
             let details: SizedURL?
         }
 
-        struct SizedURL: Decodable {
+        struct SizedURL: Codable {
             let url: String?
         }
     }

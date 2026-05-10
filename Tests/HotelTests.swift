@@ -58,6 +58,62 @@ final class HotelTests: XCTestCase {
         XCTAssertEqual(hotel.cheapestPrice, 75)
     }
 
+    func test_hotel_encodeDecode_roundTripPreservesAllFields() throws {
+        // Round-trip via JSONEncoder → JSONDecoder must reconstruct an equal Hotel.
+        // Guards against the previous asymmetric encode that wrote only id+name.
+        let original = Hotel(
+            id: 42,
+            name: "The Round Trip Resort",
+            imageURL: URL(string: "https://cdn.example.com/primary.jpg"),
+            imageURLs: [
+                URL(string: "https://cdn.example.com/primary.jpg")!,
+                URL(string: "https://cdn.example.com/extra1.jpg")!,
+                URL(string: "https://cdn.example.com/extra2.jpg")!
+            ],
+            rating: 4.6,
+            reviewCount: 318,
+            hotelStar: 5,
+            distanceMiles: 12.4,
+            distanceText: "12 mi",
+            cityName: "Newport Beach",
+            stateCode: "CA",
+            productName: "Cabana Day Pass",
+            primaryVibe: "Coastal",
+            cheapestPrice: 89.5
+        )
+
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(original)
+        let restored = try Decoders.api.decode(Hotel.self, from: data)
+
+        XCTAssertEqual(restored, original)
+    }
+
+    func test_hotel_encodeDecode_roundTripWithMinimalFields() throws {
+        // Only id + name set; optionals nil; imageURLs empty. Must still round-trip.
+        let original = Hotel(
+            id: 7,
+            name: "Bare",
+            imageURL: nil,
+            imageURLs: [],
+            rating: nil,
+            reviewCount: 0,
+            hotelStar: nil,
+            distanceMiles: nil,
+            distanceText: nil,
+            cityName: nil,
+            stateCode: nil,
+            productName: nil,
+            primaryVibe: nil,
+            cheapestPrice: nil
+        )
+
+        let data = try JSONEncoder().encode(original)
+        let restored = try Decoders.api.decode(Hotel.self, from: data)
+
+        XCTAssertEqual(restored, original)
+    }
+
     private func fixture(_ name: String) throws -> Data {
         let url = Bundle(for: type(of: self)).url(forResource: name, withExtension: "json")
             ?? URL(fileURLWithPath: #filePath)
