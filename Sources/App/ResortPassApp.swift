@@ -50,22 +50,33 @@ struct ResortPassApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Wrap in `StatusBarBridgedRoot` so a custom
-            // `UIHostingController` subclass owns `preferredStatusBarStyle`.
-            // Smaller diff than swapping the App entry for a
-            // `UIApplicationDelegateAdaptor` + `UIWindowSceneDelegate` —
-            // UIKit's `childForStatusBarStyle` traversal walks down to
-            // this representable's controller and honors its override.
-            StatusBarBridgedRoot(animator: statusBarAnimator) {
-                RootNavigationView(
-                    searchViewModel: searchViewModel,
-                    hotelsClient: hotelsClientForLaunch
-                )
-                .environment(\.statusBarStyleAnimator, statusBarAnimator)
-                .environment(\.morphTransitionAdapter, morphTransitionAdapter)
+            // The status-bar bridge is only needed on the iOS 17 fallback
+            // path. iOS 18's `.navigationTransition(.zoom)` coordinates
+            // the system status bar natively, so the
+            // `UIViewControllerRepresentable` wrapper would only add
+            // sizing-resolution overhead (and was observed to mis-size
+            // the inner SwiftUI tree by leaking iPad-default bounds onto
+            // an iPhone screen). Gate it on the deployment target's
+            // lowest fallback path.
+            if #available(iOS 18.0, *) {
+                rootContent
+            } else {
+                StatusBarBridgedRoot(animator: statusBarAnimator) {
+                    rootContent
+                }
+                .ignoresSafeArea()
             }
-            .ignoresSafeArea()
         }
+    }
+
+    @ViewBuilder
+    private var rootContent: some View {
+        RootNavigationView(
+            searchViewModel: searchViewModel,
+            hotelsClient: hotelsClientForLaunch
+        )
+        .environment(\.statusBarStyleAnimator, statusBarAnimator)
+        .environment(\.morphTransitionAdapter, morphTransitionAdapter)
     }
 
     private var hotelsClientForLaunch: HotelsClient {

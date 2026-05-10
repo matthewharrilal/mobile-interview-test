@@ -170,6 +170,17 @@ private final class MetalEditorialGrader: @unchecked Sendable {
               let textureLoader,
               let cg = image.cgImage else { return nil }
 
+        // Metal's hardware texture limit on iOS is 8192px per dimension on
+        // most GPUs. Some hotel hero photos exceed this (~8256px wide). The
+        // texture descriptor validates BEFORE the loader can return a
+        // non-throwing failure, terminating the process via Metal's
+        // assertion rather than a recoverable error. Bail early so the
+        // caller falls through to the CIFilter path (which auto-tiles).
+        let maxMetalTextureDim = 8192
+        guard cg.width <= maxMetalTextureDim, cg.height <= maxMetalTextureDim else {
+            return nil
+        }
+
         // Load source texture in BGRA8 / sRGB so the kernel sees the same
         // gamma curve CIColorControls operates in.
         let loaderOptions: [MTKTextureLoader.Option: Any] = [
