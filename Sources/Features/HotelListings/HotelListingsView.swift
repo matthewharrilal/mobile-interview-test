@@ -56,6 +56,14 @@ struct HotelListingsView: View {
     /// to preserve the existing visual rhythm.
     @ScaledMetric(relativeTo: .title) private var heroHeight: CGFloat = 360
 
+    /// Scroll offset in the "scroll" coordinate space. Driven by an
+    /// invisible PreferenceKey probe at the top of the loaded scroll
+    /// content (see `loadedState`); read by `parallaxHeader` to compute
+    /// stretch + ken-burns. Replaces a parallax-block GeometryReader so
+    /// the layout system no longer re-evaluates the hero subtree on
+    /// every scroll frame — only this single CGFloat propagates out.
+    @State private var scrollOffset: CGFloat = 0
+
     init(
         place: Place,
         client: HotelsClient = .live(),
@@ -223,6 +231,22 @@ struct HotelListingsView: View {
     }
 }
 
+// MARK: - Scroll-offset preference key
+
+/// Carries the scroll offset (the minY of an invisible 0-pt probe placed
+/// at the top of the scroll content, in the "scroll" coordinate space)
+/// out of the scroll subtree via `.onPreferenceChange`. The probe lives
+/// inside a `.background()` GeometryReader, which doesn't trigger a
+/// layout cascade — only this CGFloat propagates upward, replacing what
+/// used to be a parallax-block GeometryReader re-evaluating the hero
+/// subtree on every scroll frame.
+private struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 // MARK: - Conditional matched-transition source modifier
 
 /// Wraps the iOS-18 `.matchedTransitionSource(id:in:)` (preferred — pairs
@@ -275,6 +299,22 @@ private extension HotelListingsView {
     func loadedState(_ loaded: HotelListingsState.Loaded) -> some View {
         ScrollView {
             VStack(spacing: 0) {
+                // Invisible scroll-offset probe. 0-pt height so it doesn't
+                // shift layout, GeometryReader inside `.background()` so it
+                // reads the parent's frame without cascading. The minY of
+                // this probe in the "scroll" coordinate space tracks the
+                // scroll offset 1:1 with what the old parallax-block
+                // GeometryReader was reading.
+                Color.clear
+                    .frame(height: 0)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: ScrollOffsetKey.self,
+                                value: proxy.frame(in: .named("scroll")).minY
+                            )
+                        }
+                    )
                 parallaxHeader(loaded: loaded)
                     .padding(.bottom, Theme.Spacing.m)
                 FilterChipRow(filters: HotelListingsState.Filter.allCases, selected: $selectedFilter)
@@ -290,6 +330,9 @@ private extension HotelListingsView {
             }
         }
         .coordinateSpace(name: "scroll")
+        .onPreferenceChange(ScrollOffsetKey.self) { offset in
+            scrollOffset = offset
+        }
         .refreshable {
             // Wrap the synchronous `.loading` mutation in the surface
             // crossfade envelope so loadedState's `.transition(.opacity)`
@@ -349,78 +392,81 @@ private extension HotelListingsView {
 
     func parallaxHeader(loaded: HotelListingsState.Loaded) -> some View {
         let firstURL = loaded.hotels.first?.imageURL
-        return GeometryReader { proxy in
-            let offset = proxy.frame(in: .named("scroll")).minY
-            let stretch = max(0, offset)               // pull-down stretch
-            let parallax = max(0, -offset / 3)         // upward pan as page scrolls
-            ZStack(alignment: .bottomLeading) {
-                CachedAsyncImage(url: firstURL)
-                    .scaledToFill()
-                    .frame(width: proxy.size.width, height: heroHeight + stretch)
-                    .offset(y: -stretch / 2 - parallax)
-                    .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
-                    .clipped()
+        // Drive parallax from `scrollOffset` (fed by ScrollOffsetKey) so
+        // the layout system isn't dragged through a GeometryReader
+        // re-evaluation on every scroll frame. Math is identical to what
+        // the previous proxy-driven block computed: stretch on pull-down,
+        // upward parallax pan as the page scrolls.
+        let stretch = max(0, scrollOffset)
+        let parallax = max(0, -scrollOffset / 3)
+        return ZStack(alignment: .bottomLeading) {
+            CachedAsyncImage(url: firstURL)
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: heroHeight + stretch)
+                .offset(y: -stretch / 2 - parallax)
+                .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
+                .clipped()
 
-                // Top edge softener — fades from the page background into
-                // the photo so the top line never reads as a hard cut against
-                // the chrome (especially when overscrolling exposes the area
-                // above the image). Light mode only: in dark mode the page
-                // background resolves to near-black and the gradient becomes
-                // a visible darkening band against bright photographic
-                // content (see F-T-03), so we skip the softener entirely —
-                // modern iOS does not show a hard cut at the safe-area
-                // boundary.
-                if colorScheme == .light {
-                    LinearGradient(
-                        stops: [
-                            .init(color: Theme.Color.background.opacity(0.85), location: 0.0),
-                            .init(color: Theme.Color.background.opacity(0.30), location: 0.06),
-                            .init(color: .clear,                                 location: 0.18)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .allowsHitTesting(false)
-                }
-
-                // Tonal vignette — preserves headline legibility against the photo.
+            // Top edge softener — fades from the page background into
+            // the photo so the top line never reads as a hard cut against
+            // the chrome (especially when overscrolling exposes the area
+            // above the image). Light mode only: in dark mode the page
+            // background resolves to near-black and the gradient becomes
+            // a visible darkening band against bright photographic
+            // content (see F-T-03), so we skip the softener entirely —
+            // modern iOS does not show a hard cut at the safe-area
+            // boundary.
+            if colorScheme == .light {
                 LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.25),
-                        Color.black.opacity(0.0)
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
-                )
-                .allowsHitTesting(false)
-
-                // Bottom scrim — for legibility of the white text overlay
-                LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.0),
-                        Color.black.opacity(0.0),
-                        Color.black.opacity(0.65)
+                    stops: [
+                        .init(color: Theme.Color.background.opacity(0.85), location: 0.0),
+                        .init(color: Theme.Color.background.opacity(0.30), location: 0.06),
+                        .init(color: .clear,                                 location: 0.18)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(viewModel.state.location.name.uppercased())
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .tracking(1.4)
-                        .foregroundStyle(.white.opacity(0.9))
-                    Text(headerSummary(loaded: loaded))
-                        .font(Theme.Typography.editorialDisplay)
-                        .foregroundStyle(.white)
-                }
-                .padding(Theme.Spacing.l)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .allowsHitTesting(false)
             }
-            .frame(width: proxy.size.width, height: heroHeight)   // taller than before to absorb safe-area extension
-            .clipped()
+
+            // Tonal vignette — preserves headline legibility against the photo.
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.25),
+                    Color.black.opacity(0.0)
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .allowsHitTesting(false)
+
+            // Bottom scrim — for legibility of the white text overlay
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(0.0),
+                    Color.black.opacity(0.0),
+                    Color.black.opacity(0.65)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(viewModel.state.location.name.uppercased())
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .tracking(1.4)
+                    .foregroundStyle(.white.opacity(0.9))
+                Text(headerSummary(loaded: loaded))
+                    .font(Theme.Typography.editorialDisplay)
+                    .foregroundStyle(.white)
+            }
+            .padding(Theme.Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: heroHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: heroHeight)        // anchors the layout slot; image overflow above is clipped here
+        .clipped()
     }
 
     func headerSummary(loaded: HotelListingsState.Loaded) -> String {
