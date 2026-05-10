@@ -58,6 +58,26 @@ struct CompactHotelCard: View {
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                // Product/timeslot — the most relevant product info per the
+                // interview spec. Surfaces the API's `product_name` (e.g.
+                // "Pool Pass 9pm–10:45pm") in a tertiary role so the
+                // editorial tagline keeps the visual lead while the
+                // bookable surface is still legible at a glance.
+                // `reservesSpace` keeps cards equal-height even when a
+                // row lacks a product name.
+                if let productName = hotel.productName, !productName.isEmpty {
+                    Text(productName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.Color.textTertiary)
+                        .lineLimit(1, reservesSpace: true)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    // Empty placeholder maintains card height parity with
+                    // siblings that DO have a productName.
+                    Color.clear.frame(height: 14)
+                }
+
                 // Tertiary price + stars — quiet, supporting role
                 HStack(alignment: .center, spacing: Theme.Spacing.s) {
                     if let rating = hotel.rating, rating > 0 {
