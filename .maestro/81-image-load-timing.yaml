@@ -1,0 +1,43 @@
+appId: com.resortpass.interview.ResortPass
+name: Image load timing — hotels-loaded with extra settle window
+tags:
+  - hotels
+  - loaded
+  - images
+  - timing
+# T-022 / F-024 investigation: flow 01's `01-hotels-loaded.png` shows
+# BrandedImagePlaceholder fallbacks on top-of-fold cards because Maestro
+# screenshots before Kingfisher finishes the download + EditorialGrade
+# pipeline. This flow reproduces flow 01 but waits for "Top picks" (post
+# data-bind) and adds a 3s static settle window so images can land.
+#
+# If 81-hotels-loaded.png shows real photography while 01-hotels-loaded.png
+# shows placeholders, hypothesis (a) is confirmed: load-timing artifact,
+# not a code bug. Recommended fix is harness-side (longer wait) or app-side
+# (Kingfisher ImagePrefetcher on listings load).
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- tapOn: "Newport Beach, California"
+
+# Wait for data-bound content (proves listings rendered), not just nav title.
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+
+# Settle window — KFImage download + CIColorControls decode pipeline
+# does not block waitForAnimationToEnd. Static 3s buys the gallery time
+# to fully resolve before screenshot.
+- waitForAnimationToEnd:
+    timeout: 4000
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 3000
+
+- takeScreenshot: 81-hotels-loaded
