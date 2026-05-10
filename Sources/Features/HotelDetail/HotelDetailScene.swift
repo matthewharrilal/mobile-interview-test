@@ -31,6 +31,19 @@ struct HotelDetailScene: View {
     /// asks for an 80–100ms beat AFTER that before content appears).
     @State private var contentOpacity: Double = 0
 
+    /// Live drag translation on the hero. Drives `dismissProgress` (writer
+    /// contract) and the rubber-band offset on the hero itself. Reset on
+    /// snap-back; on commit the host's morph-spring drives unwind.
+    @State private var dragTranslation: CGFloat = 0
+
+    // MARK: Drag thresholds (per UX-research §7)
+    /// Below this point, release rubber-bands back — no commit.
+    private static let dismissCancelBelow: CGFloat = 100
+    /// At/above this point, release commits the dismiss.
+    private static let dismissCommitAt: CGFloat = 200
+    /// `dismissProgress` reaches 1.0 when translation hits this value.
+    private static let dismissProgressDistance: CGFloat = 600
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             // Detail surface — fades in BEHIND the morphing hero so the
@@ -88,6 +101,46 @@ private extension HotelDetailScene {
         .frame(height: 360)
         .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
         .matchedGeometryEffect(id: sourceID, in: ns, isSource: true)
+        .offset(y: rubberBandedOffset(for: dragTranslation))
+        .gesture(dismissDrag)
+    }
+
+    /// Light rubber-band so even sub-100pt drags feel tactile. Linear up to
+    /// 100pt, then sqrt-damped past that — keeps the hero visible without
+    /// running off the screen during a committed throw.
+    func rubberBandedOffset(for translation: CGFloat) -> CGFloat {
+        guard translation > 0 else { return 0 }
+        if translation <= Self.dismissCancelBelow { return translation }
+        let excess = translation - Self.dismissCancelBelow
+        return Self.dismissCancelBelow + sqrt(excess * 40)
+    }
+
+    /// Drag gesture on the hero that drives the `dismissProgress` binding
+    /// (writer contract) and fires `onDismiss` once the commit threshold
+    /// is crossed on release. Restricted to the hero so ScrollView panning
+    /// of the content below remains unaffected.
+    var dismissDrag: some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                let downward = max(0, value.translation.height)
+                dragTranslation = downward
+                dismissProgress = min(1, max(0, downward / Self.dismissProgressDistance))
+            }
+            .onEnded { value in
+                let downward = max(0, value.translation.height)
+                if downward >= Self.dismissCommitAt {
+                    // Host owns the morph-spring envelope on `onDismiss`;
+                    // we just fire the callback and let it run.
+                    onDismiss()
+                } else {
+                    // Rubber-band snap-back — both <100pt and 100–200pt
+                    // bands cancel. Spring back to rest.
+                    withAnimation(.interpolatingSpring(stiffness: 200, damping: 20)) {
+                        dragTranslation = 0
+                        dismissProgress = 0
+                    }
+                }
+            }
     }
 }
 
