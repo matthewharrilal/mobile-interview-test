@@ -140,17 +140,31 @@ private extension HotelListingsView {
                     .scaleEffect(1.0 + (stretch / 2400.0), anchor: .center)  // subtle ken-burns on pull
                     .clipped()
 
-                // Top scrim — fades the image into the translucent nav bar
-                // so there's no hard top edge against the chrome.
+                // Top edge softener — fades from the page background into
+                // the photo so the top line never reads as a hard cut against
+                // the chrome (especially when overscrolling exposes the area
+                // above the image).
+                LinearGradient(
+                    stops: [
+                        .init(color: Theme.Color.background.opacity(0.85), location: 0.0),
+                        .init(color: Theme.Color.background.opacity(0.30), location: 0.06),
+                        .init(color: .clear,                                 location: 0.18)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+
+                // Tonal vignette — preserves headline legibility against the photo.
                 LinearGradient(
                     colors: [
-                        Color.black.opacity(0.45),
-                        Color.black.opacity(0.10),
+                        Color.black.opacity(0.25),
                         Color.black.opacity(0.0)
                     ],
                     startPoint: .top,
                     endPoint: .center
                 )
+                .allowsHitTesting(false)
 
                 // Bottom scrim — for legibility of the white text overlay
                 LinearGradient(

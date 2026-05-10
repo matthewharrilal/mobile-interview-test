@@ -1,0 +1,99 @@
+appId: com.resortpass.interview.ResortPass
+name: Comprehensive visual audit — scroll, tap, long-press, filter, sheet, scrollTransition
+tags:
+  - visual-audit
+---
+# 1. Fresh launch — Search idle
+- launchApp:
+    clearState: true
+- takeScreenshot: audit-01-search-idle
+
+# 2. Type query → loaded state with type-aware rows
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: audit-02-search-loaded
+
+# 3. Tap to navigate to Hotels (matchedGeometry hero transition)
+- tapOn: "Newport Beach, California"
+
+# 4. Land on hotel listings — parallax header + filter chips + Top picks
+- extendedWaitUntil:
+    visible: "Top picks"
+    timeout: 12000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: audit-03-hotels-landed
+
+# 5. Tap a filter chip BEFORE scrolling away (chip strip is visible at the top)
+- tapOn: "Pool"
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-04-pool-filter-applied
+
+# 6. Reset filter
+- tapOn: "All"
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-05-all-filter-reset
+
+# 7. Scroll horizontally inside the Top picks carousel — verify scrollTransition
+- swipe:
+    start: 80%, 60%
+    end: 20%, 60%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-06-carousel-after-horizontal-swipe
+
+# 8. Scroll vertically to reveal more sections
+- swipe:
+    start: 50%, 75%
+    end: 50%, 25%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-07-after-vertical-scroll
+
+# 9. Continue scrolling to surface "Within walking distance" / "Best value"
+- swipe:
+    start: 50%, 75%
+    end: 50%, 25%
+    duration: 500
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-08-deeper-scroll
+
+# 10. Tap a card → presentation sheet
+- tapOn:
+    point: "30%, 45%"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: audit-09-detail-sheet
+
+# 11. Drag the sheet up to the .large detent
+- swipe:
+    start: 50%, 30%
+    end: 50%, 8%
+    duration: 600
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-10-sheet-large
+
+# 12. Dismiss sheet (drag down)
+- swipe:
+    start: 50%, 8%
+    end: 50%, 90%
+    duration: 600
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-11-back-to-list
+
+# 13. Back to search via nav bar tap
+- tapOn:
+    point: "5%, 8%"
+- waitForAnimationToEnd:
+    timeout: 1500
+- takeScreenshot: audit-12-back-on-search

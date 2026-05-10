@@ -1,0 +1,27 @@
+appId: com.resortpass.interview.ResortPass
+name: Stretchy hero audit — rest only
+tags:
+  - visual-audit
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+- tapOn: "Newport Beach, California"
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+
+- waitForAnimationToEnd:
+    timeout: 8000
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- takeScreenshot: hero-rest-no-isa
