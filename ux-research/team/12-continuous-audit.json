@@ -1,0 +1,210 @@
+{
+  "version": "1.0",
+  "purpose": "Continuous code-quality audits for the Airbnb-transitions build. Runs after every feature/sub-criterion completes to prevent silent accumulation of debt across the 2-day team execution.",
+  "scope": {
+    "applies_to": "All tasks in the rp-transitions team — architect scaffold, Workers A/B/C transitions, polish pass.",
+    "exempt": "Pure documentation tasks (no .swift files modified)."
+  },
+  "cadence": {
+    "primary": "after-every-feature-complete",
+    "definition": "An 'audit firing' is triggered every time a worker marks their feature task as 'completed' via TaskUpdate. The team-lead detects this completion and dispatches the four-dimension audit pass against the worker's diff.",
+    "secondary_passes": [
+      {"trigger": "Architect scaffold commit", "scope": "All four dimensions against the new scaffold files"},
+      {"trigger": "Polish task in progress", "scope": "Full-system pass — D4 (System-as-a-whole) is the dominant lens here"}
+    ],
+    "rationale": "Per-feature cadence catches issues while context is fresh, before they compound. Daily/end-of-build cadences let weeks-old debt fester. After-every-feature is the tightest coherent loop.",
+    "do_not": "Do NOT batch audits to 'end of phase' — that defeats the prevention goal."
+  },
+  "mechanism": {
+    "primary": "Combination: linter/grep for mechanical + agent dispatch for judgment",
+    "mechanical": {
+      "tool": "scripts/audit.sh",
+      "invocation": "scripts/audit.sh {dimension} {target_path}",
+      "dimensions_supported": ["hygiene", "architecture", "judgment", "system", "all"],
+      "exit_codes": "0 = no mechanical failures; 1 = mechanical failures present (file remediation tasks); 2 = invocation error",
+      "philosophy": "Mechanical checks are deterministic, fast (<5s), and catch the obvious. They are necessary but not sufficient — judgment dimensions require an agent."
+    },
+    "agent_dispatch": {
+      "tool": "Agent (general-purpose subagent_type) joined to rp-transitions team",
+      "naming": "auditor-D{n}-{worker}  (e.g., auditor-D1-workerA, auditor-D4-architect)",
+      "input": "scripts/audit.sh output for the relevant dimension + git diff of the worker's commit + 12-continuous-audit.json (this file) + 00-build-brief.md",
+      "output": "Findings filed as TaskCreate entries (one task per finding) with subject pattern 'Remediate D{n}: {finding-summary}' AND a SendMessage summary to team-lead",
+      "philosophy": "Judgment dimensions cannot be checked by grep — they require reading code and understanding intent. Agents fill this gap."
+    },
+    "combination_principle": "Mechanical checks fire FIRST (cheap, fast). Agent dispatch is conditional only on the worker's slice having significant code (>50 LOC changed). This protects judgment-agent budget while ensuring any sizeable change gets a real read."
+  },
+  "dimensions": {
+    "D1_code_hygiene": {
+      "purpose": "Code-level cleanliness — preventable issues a competent engineer should notice on review.",
+      "items_explicit_per_user_directive": [
+        "DRY",
+        "singletons",
+        "dead code",
+        "magic numbers",
+        "commented code",
+        "naming consistency"
+      ],
+      "checks": [
+        {
+          "name": "DRY",
+          "mechanical": "scripts/audit.sh hygiene flags duplicate function signatures across files. Tighter check (block-level dupes) requires ast-grep — when present, also runs that.",
+          "judgment": "Auditor agent reads the diff for near-duplicate code blocks (logic that differs only by literal values, etc.) and recommends extraction into a shared helper or modifier."
+        },
+        {
+          "name": "singletons",
+          "mechanical": "grep -rn 'static let shared' Sources/ — flags every occurrence",
+          "judgment": "Auditor agent reviews each flagged singleton: is it justified (e.g., URLSession.shared bridge) or should it be DI'd through the ViewModel init?"
+        },
+        {
+          "name": "dead code",
+          "mechanical": "scripts/audit.sh hygiene scans for `private func X(...)` whose name appears only at the definition site. Xcode warnings (-Wunused-* family) supplement.",
+          "judgment": "Auditor agent identifies dead types, dead extensions, dead enum cases, dead Theme tokens (which mechanical checks may miss because cross-module references hide them)."
+        },
+        {
+          "name": "magic numbers",
+          "mechanical": "scripts/audit.sh hygiene flags `.frame(...)`, `.padding(...)`, `spacing:` lines containing 2+ digit literals AND not referencing `Theme.`. False positives expected on animation tuning values.",
+          "judgment": "Auditor agent triages flagged lines: layout magic → Theme tokens; animation magic → leave inline (acceptable per brief); ambiguous → ask in remediation task."
+        },
+        {
+          "name": "commented code",
+          "mechanical": "grep for `//` followed by Swift-like punctuation (parens, braces, equals, semicolons), excluding `MARK:`, `TODO:`, `FIXME:`, `NOTE:`, and URL-bearing lines.",
+          "judgment": "Auditor agent confirms each hit is actually commented-out code (not prose-with-punctuation) and recommends deletion or conversion to TODO."
+        },
+        {
+          "name": "naming consistency",
+          "mechanical": "grep for top-level decls starting with uppercase (non-camelCase). Flags violations of Swift's lowerCamelCase convention.",
+          "judgment": "Auditor agent reviews semantic naming: are identifier names *meaningful* (not `t1`, `tmp`, `data2`)? Are abbreviations consistent across files?"
+        }
+      ]
+    },
+    "D2_architecture_and_abstraction": {
+      "purpose": "Structural quality — boundaries, abstraction, dependency direction.",
+      "items_explicit_per_user_directive": [
+        "cohesion",
+        "premature abstraction",
+        "missing abstraction",
+        "module boundaries",
+        "dependency direction"
+      ],
+      "checks": [
+        {
+          "name": "cohesion",
+          "mechanical": "File size > 500 LOC is a weak cohesion signal (one file, many concerns).",
+          "judgment": "Auditor agent reads each new file: is it doing ONE thing? If a file has both a View and a separate ViewModifier extension and a free function, that's a cohesion smell — split."
+        },
+        {
+          "name": "premature abstraction",
+          "mechanical": "Count protocol conformers; flag protocols with ≤1 conformer (unjustified protocol = abstraction without payoff).",
+          "judgment": "Auditor agent reviews each flagged protocol: is it justified (e.g., for testability via mock conformer that only exists in tests) or genuinely premature?"
+        },
+        {
+          "name": "missing abstraction",
+          "mechanical": "N/A — there is no clean grep for 'this should be a protocol/struct'.",
+          "judgment": "Auditor agent identifies copy-paste between modules that should be extracted (e.g., the same blur+dim modifier reimplemented in 3 places)."
+        },
+        {
+          "name": "module boundaries",
+          "mechanical": "grep imports in lower layers (Models/, Networking/) for upper layer imports (DesignSystem/, Features/) — flags violations.",
+          "judgment": "Auditor agent reviews any borderline cases the mechanical check missed (e.g., a Networking type that secretly depends on a SwiftUI type)."
+        },
+        {
+          "name": "dependency direction",
+          "mechanical": "grep for cross-feature imports inside Features/ (Search importing HotelListings, etc.) — flags any.",
+          "judgment": "Auditor agent reviews whether the dependency direction across the new files is sane (downward only: View → ViewModel → Service → Model)."
+        }
+      ]
+    },
+    "D3_senior_judgment_and_technical_debt": {
+      "purpose": "Anti-patterns and technical debt a senior engineer would refuse to ship.",
+      "items_explicit_per_user_directive": [
+        "anti-patterns",
+        "code smells",
+        "complexity",
+        "file/function size",
+        "hidden state"
+      ],
+      "checks": [
+        {
+          "name": "anti-patterns",
+          "mechanical": "grep for `try!`, `as!`, `fatalError(` in non-test, non-preview code. Each occurrence fails the audit.",
+          "judgment": "Auditor agent reviews each flagged occurrence: is there a defensible reason (e.g., compile-time-known invariant that must crash if violated) or should it be a `try?` / `Result` / `guard`?"
+        },
+        {
+          "name": "code smells",
+          "mechanical": "grep for funcs with > 5 parameters; grep for nested ternaries; grep for guard chains > 5 deep.",
+          "judgment": "Auditor agent reviews each smell: is the function genuinely doing too much, or is it a bridge function where parameters are unavoidable?"
+        },
+        {
+          "name": "complexity",
+          "mechanical": "scripts/audit.sh judgment uses an awk parser to flag functions whose body exceeds 50 LOC. (lizard installed → use it instead.)",
+          "judgment": "Auditor agent reviews each long function: is the cyclomatic complexity warranted (e.g., a switch over many enum cases) or should it decompose?"
+        },
+        {
+          "name": "file/function size",
+          "mechanical": "find Sources/ -name '*.swift' -exec wc -l {} + | awk '$1 > 400'. Flags every file over 400 LOC.",
+          "judgment": "Auditor agent reviews each large file: are the constituents cohesive (one type with extensions) or is this a bag of unrelated stuff?"
+        },
+        {
+          "name": "hidden state",
+          "mechanical": "grep for `static var` (mutable globals — fail). grep for `@State` in Features/ — advisory output (gesture/focus state is OK; persisted-business-logic state is NOT).",
+          "judgment": "Auditor agent reviews `@State` occurrences in Features/: per-frame intermediate (drag offset, focus state, transient animation values) is correct; commit-worthy state must live in the ViewModel."
+        }
+      ]
+    },
+    "D4_system_as_a_whole": {
+      "purpose": "Whole-system health — does the change integrate cleanly without regression.",
+      "items_explicit_per_user_directive": [
+        "regression risk",
+        "cross-criterion consistency",
+        "integration smells",
+        "holistic flow"
+      ],
+      "checks": [
+        {
+          "name": "regression risk",
+          "mechanical": "xcodegen generate && xcodebuild -scheme ResortPass build (clean). Existing Maestro flows must still pass.",
+          "judgment": "Auditor agent reviews the diff against the original brief: did this change introduce risk to features outside its scope (e.g., touched a shared component)?"
+        },
+        {
+          "name": "cross-criterion consistency",
+          "mechanical": "N/A — judgment only.",
+          "judgment": "Auditor agent reviews the changes against existing patterns in the repo: same Theme.* usage style? same MVI invariant (private(set) state, send entry point)? same matchedGeometryEffect ID naming pattern? Same animation parameter conventions?"
+        },
+        {
+          "name": "integration smells",
+          "mechanical": "N/A — judgment only.",
+          "judgment": "Auditor agent reviews coupling at module boundaries: is HotelDetailScene leaking implementation details into HotelListingsView? Is the dismissProgress binding plumbed cleanly or does it bypass the ViewModel?"
+        },
+        {
+          "name": "holistic flow",
+          "mechanical": "Maestro flow execution (.maestro/13-transitions-audit.yaml or equivalent) — exercises tap-to-expand and swipe-down dismiss end-to-end.",
+          "judgment": "Auditor agent reviews the Maestro flow log + screenshots for jank, missed frames, layout shifts, or behavior that visually deviates from the Airbnb reference."
+        }
+      ]
+    }
+  },
+  "definition_of_done_template": {
+    "applies_to": "Every feature/scaffold/transition task — architect, Worker A, Worker B, Worker C, polish.",
+    "the_template": [
+      "1. Code compiled (xcodebuild -scheme ResortPass build passes).",
+      "2. scripts/audit.sh hygiene {target} → exit 0 OR all findings filed as Remediate D1 tasks before marking completed.",
+      "3. scripts/audit.sh architecture {target} → exit 0 OR all findings filed as Remediate D2 tasks.",
+      "4. scripts/audit.sh judgment {target} → exit 0 OR all findings filed as Remediate D3 tasks.",
+      "5. scripts/audit.sh system {target} → exit 0 (build passes) AND Maestro flows for the affected surface still execute.",
+      "6. Self-attestation: worker has reviewed their own diff against D1–D4 dimensions.",
+      "7. Worker marks task completed via TaskUpdate(status: completed). Team-lead detects completion and dispatches per-dimension auditor agents per the cadence rule. Audit findings become new Remediate-* tasks that block final acceptance of the feature."
+    ],
+    "block_until_clean": "Feature task is not 'truly' done until all four dimensions have been audited (mechanically + by agent) and remediation tasks are either resolved or explicitly waived by team-lead with rationale."
+  },
+  "remediation_protocol": {
+    "finding_to_task": "Each judgment-dimension audit finding becomes a TaskCreate with subject 'Remediate D{n}: {brief}' (n ∈ {1,2,3,4}) and metadata { dimension: D{n}, original_feature_task: T#, severity: critical|major|minor }",
+    "non_blocking_findings": "Minor findings (cosmetic, single-instance) may be filed as 'observation' entries in ux-research/team/audit-log.md instead of new tasks — these are tracked but do not block the feature.",
+    "feature_acceptance": "Feature task moves to 'fully accepted' state only after all critical/major remediations complete OR team-lead explicitly waives with logged rationale in the task description.",
+    "audit_log_path": "ux-research/team/audit-log.md — append-only running log of audit firings, dimensions covered, findings filed, remediations resolved."
+  },
+  "where_in_plan_structure": {
+    "layer_1_top_level_json": "ux-research/team/12-continuous-audit.json — THIS FILE. Master spec; canonical source for the four dimensions, cadence, mechanism, DoD template, and remediation protocol.",
+    "layer_2_inline_definition_of_done": "Every feature task description (TaskUpdate description field) contains an explicit 'Definition of Done' block listing the seven items from definition_of_done_template — workers see them in their TaskGet output and cannot mark task completed without them.",
+    "layer_3_auxiliary_expansion": "ux-research/team/09-auxiliary.md — auxiliary tasks (audit dispatch, remediation patterns, audit-log management). Workers and auditor agents read this for the operational mechanics."
+  }
+}
