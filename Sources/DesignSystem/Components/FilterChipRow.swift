@@ -58,7 +58,7 @@ private struct FilterChip: View {
             .overlay(
                 Capsule().stroke(
                     isSelected ? Color.clear : Theme.Color.border,
-                    lineWidth: 0.5
+                    lineWidth: Theme.Spacing.hairline   // single physical pixel — crisp on @2x and @3x
                 )
             )
             .shadow(

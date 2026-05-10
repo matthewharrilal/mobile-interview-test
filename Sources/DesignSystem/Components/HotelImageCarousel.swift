@@ -95,7 +95,7 @@ struct HotelImageCarousel: View {
         .padding(.horizontal, Theme.Spacing.s)
         .padding(.vertical, 4)
         .background(.ultraThinMaterial.opacity(0.7), in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
+        .overlay(Capsule().stroke(Color.white.opacity(0.35), lineWidth: Theme.Spacing.hairline))
     }
 
     private var pagingIndicator: some View {

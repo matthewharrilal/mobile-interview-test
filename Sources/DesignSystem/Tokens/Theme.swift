@@ -4,6 +4,7 @@
 // Inline color/font literals in Sources/ are forbidden and grep-gated.
 
 import SwiftUI
+import UIKit
 
 enum Theme {
 
@@ -38,6 +39,16 @@ enum Theme {
         static let m: CGFloat = 16
         static let l: CGFloat = 24
         static let xl: CGFloat = 32
+
+        /// Single physical-pixel hairline (1.0 / device scale). On @2x =
+        /// 0.5 pt, on @3x ≈ 0.333 pt — both land exactly on the device
+        /// pixel grid so a stroke or frame at this thickness renders as
+        /// one crisp pixel without anti-aliased blur. Use for editorial
+        /// rules (`Rectangle().frame(height:)`) and capsule/rect strokes
+        /// (`.stroke(lineWidth:)`) that need the same crispness as
+        /// SwiftUI's built-in `Divider()`. A flat `0.5` literal is sub-
+        /// pixel on @3x and reads as a soft 1.5-px blur.
+        static let hairline: CGFloat = 1.0 / UIScreen.main.scale
     }
 
     // MARK: - Corner Radius

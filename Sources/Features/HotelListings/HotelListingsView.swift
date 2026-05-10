@@ -411,7 +411,7 @@ private extension HotelListingsView {
                 Spacer()
                 Rectangle()
                     .fill(Theme.Color.border)
-                    .frame(height: 0.5)
+                    .frame(height: Theme.Spacing.hairline)   // single physical pixel — crisp on @2x and @3x
                     .frame(maxWidth: 60)
             }
             .padding(.horizontal, Theme.Spacing.m)
