@@ -1,5 +1,5 @@
 appId: com.resortpass.interview.ResortPass
-name: Comprehensive visual audit — scroll, tap, long-press, filter, sheet, scrollTransition
+name: Comprehensive visual audit — scroll, tap, filter, card→detail morph, scrollTransition
 tags:
   - visual-audit
 ---
@@ -66,14 +66,17 @@ tags:
     timeout: 1500
 - takeScreenshot: audit-08-deeper-scroll
 
-# 10. Tap a card → presentation sheet
+# 10. Tap a card → matched-geometry card→detail morph (transition shell, no .sheet)
 - tapOn:
     point: "30%, 45%"
 - waitForAnimationToEnd:
     timeout: 2000
 - takeScreenshot: audit-09-detail-sheet
 
-# 11. Drag the sheet up to the .large detent
+# 11. Upward swipe inside detail (legacy capture point — there is no detent;
+#     post-transition-shell the detail is full-screen via matched-geometry, so
+#     this swipe just scrolls detail content. Screenshot retained for parity
+#     with the historical baseline.)
 - swipe:
     start: 50%, 30%
     end: 50%, 8%
@@ -82,7 +85,7 @@ tags:
     timeout: 1500
 - takeScreenshot: audit-10-sheet-large
 
-# 12. Dismiss sheet (drag down)
+# 12. Dismiss detail via swipe-down (rubber-band → commit, reverses card→detail morph)
 - swipe:
     start: 50%, 8%
     end: 50%, 90%
