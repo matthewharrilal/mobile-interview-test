@@ -34,7 +34,7 @@ Significant design choices made during this take-home, in roughly chronological 
 
 **Decision.** Function-style clients. Each client is a `Sendable struct` whose fields are `@Sendable async throws` closures. Variants surface as static factories (`.live`, `.preview`, `.failing`, `.failingThenRecovers`).
 
-**Rationale.** The Point-Free / TCA pattern. One-line test swap (`SearchClient { _ in [] }`) without conformance ceremony. Combines well with Swift Concurrency's `Sendable` constraint. At 4 dependencies, a DI container is over-engineering. See `ARCHITECTURE.md > Composition root` for the "why not protocols" reasoning in detail.
+**Rationale.** The Point-Free / TCA pattern. One-line test swap (`SearchClient { _ in [] }`) without conformance ceremony. Combines well with Swift Concurrency's `Sendable` constraint. At 3 dependencies, a DI container would be over-engineering. See `ARCHITECTURE.md > Composition root` for the "why not protocols" reasoning in detail.
 
 **Trade-off accepted.** No compile-time discoverability of "which types implement this interface?" — you have to know the client is a struct of closures. For this scale it's a non-issue.
 
@@ -111,11 +111,11 @@ Pinned in commit `25987de`.
 
 **Context.** Pre-refactor, `SearchClient` was wired in `ResortPassApp.init`, but `HotelsClient` was wired (with its own DEBUG launch-argument logic) in `RootNavigationView.body`. Two places to read to see the full dependency graph; duplicated UserDefaults parsing.
 
-**Decision.** Introduce `AppDependencies` (`Sources/App/AppDependencies.swift`) — a `Sendable struct` bundling `search`, `hotels`, `http`, `logger` with `.live()` and `.preview` factories. Built once in `ResortPassApp.init`. Threaded via `@Environment(\.dependencies)`.
+**Decision.** Introduce `AppDependencies` (`Sources/App/AppDependencies.swift`) — a `Sendable struct` bundling `search`, `hotels`, and `logger` with `.live()` and `.preview` factories. Built once in `ResortPassApp.init`. Threaded via `@Environment(\.dependencies)`. (An earlier draft also bundled `http`, but no consumer reads it directly — each client builds its own `HTTPClient.live()` internally — so it was dropped to keep the surface minimal.)
 
 **Rationale.** Single composition root. Read one file to see every dependency. View-model constructor injection still takes the specific client (separation of concerns) — the bundle is for views that need ad-hoc access without prop-drilling.
 
-**Trade-off accepted.** Adds a layer of indirection (env value → struct field → client). For 4 clients the value clearly exceeds the cost. At 1-2 clients the indirection would be over-engineering.
+**Trade-off accepted.** Adds a layer of indirection (env value → struct field → client). For 3 clients the value clearly exceeds the cost. At 1-2 clients the indirection would be over-engineering.
 
 ---
 
@@ -123,7 +123,12 @@ Pinned in commit `25987de`.
 
 **Context.** Interview spec for Screen 2: "Render the results in a vertical list (e.g., `List` or `LazyVStack` inside a `ScrollView`)."
 
-**Decision.** Sectioned horizontal carousels (`Top picks`, `Highest rated near you`, `Within walking distance`) in a vertical scroll instead.
+**Decision.** Sectioned horizontal carousels in a vertical scroll instead. Four sections, built by a pure section pipeline on the loaded state:
+
+- `Top picks` (subtitle: *Highest rated near you*) — top 5 by rating
+- `Within walking distance` — hotels within 1.5 mi
+- `Best value` (subtitle: *Lowest day passes today*) — cheapest 5 by price
+- `All hotels` — fallback for everything not surfaced in the curated sections
 
 **Rationale.** Hospitality search is image-led — wide photo-dominant cards in a peek-carousel give every result equal first-class visual real estate, matching the rhythm of 2026-era travel apps (Airbnb, Hopper, Booking.com). Sectioning by editorial axis surfaces curation, differentiating a day-pass marketplace from a generic directory.
 
