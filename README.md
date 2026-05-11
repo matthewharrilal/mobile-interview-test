@@ -3,7 +3,7 @@
 > Two-screen iOS app for the ResortPass Founding iOS Engineer interview.
 > Search a place, view hotel day passes there. SwiftUI, hand-rolled MVI, Swift Concurrency.
 
-<sub>iOS&nbsp;17+&nbsp;·&nbsp;Swift&nbsp;5.9&nbsp;·&nbsp;120&nbsp;unit&nbsp;tests&nbsp;·&nbsp;81&nbsp;Maestro&nbsp;flows&nbsp;·&nbsp;9&nbsp;ADRs</sub>
+<sub>iOS&nbsp;17+&nbsp;·&nbsp;Swift&nbsp;5.9&nbsp;·&nbsp;120&nbsp;unit&nbsp;tests&nbsp;·&nbsp;81&nbsp;Maestro&nbsp;flows&nbsp;·&nbsp;9&nbsp;ADRs&nbsp;·&nbsp;[CI&nbsp;wired](.github/workflows/ci.yml)</sub>
 
 ---
 
