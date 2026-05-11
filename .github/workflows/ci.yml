@@ -1,0 +1,372 @@
+# ResortPass iOS CI
+# ------------------------------------------------------------------------------
+# Three jobs:
+#   1. unit-tests       — xcodebuild test (XCTest, ~120 tests). Runs on every push/PR.
+#   2. maestro-smoke    — boots iPhone 16 Pro / iOS 18, installs the .app, runs a
+#                         critical subset of Maestro flows. Runs on every push/PR
+#                         once unit-tests pass. ~5 flows, ~5 minutes.
+#   3. maestro-full     — runs ALL 81 .maestro/*.yaml flows. Scheduled weekly and
+#                         on manual workflow_dispatch. Skipped on push/PR because
+#                         81 × ~30s ≈ 40 min — too slow for a per-commit gate.
+#
+# How Maestro assertions work here:
+#   Flows use `assertVisible: "<real user-facing text>"`, named screenshot
+#   checkpoints, and `extendedWaitUntil` with timeouts. One flow uses a
+#   coordinate tap (5%, 8%) for the system nav back button. Maestro exits
+#   non-zero on any failed assertion — CI just runs the flows; no custom
+#   diff/compare harness is needed.
+#
+# External dependency:
+#   Flows hit the REAL staging API (staging-app.resortpass.com). No mocking.
+#   If staging is down, CI fails. Accepted trade-off for high-fidelity coverage.
+# ------------------------------------------------------------------------------
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    # Weekly full Maestro sweep — Mondays at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCHEME: ResortPass
+  SIM_NAME: iPhone 16 Pro
+  SIM_OS: "18.0"
+  BUNDLE_ID: com.resortpass.interview.ResortPass
+  DERIVED_DATA_PATH: ~/Library/Developer/Xcode/DerivedData
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: unit-tests
+  # ---------------------------------------------------------------------------
+  unit-tests:
+    name: Unit tests (XCTest)
+    runs-on: macos-15
+    if: github.event_name != 'schedule'
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          xcrun simctl list runtimes | grep -i ios || true
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-xcode16-${{ hashFiles('project.yml', 'Sources/**', 'Tests/**') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-xcode16-
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Regenerate Xcode project from project.yml
+        run: xcodegen generate
+
+      - name: Resolve SPM dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ResortPass.xcodeproj \
+            -scheme "$SCHEME"
+
+      - name: Resolve simulator destination
+        id: sim
+        run: |
+          DEST="platform=iOS Simulator,name=${SIM_NAME},OS=${SIM_OS}"
+          echo "destination=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: xcodebuild test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project ResortPass.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "${{ steps.sim.outputs.destination }}" \
+            -resultBundlePath build/ResortPass.xcresult \
+            -enableCodeCoverage YES \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify || (echo "::error::xcodebuild test failed" && exit 1)
+
+      - name: Upload xcresult bundle (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ResortPass.xcresult
+          path: build/ResortPass.xcresult
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Job 2: maestro-smoke — critical subset on every push/PR
+  # ---------------------------------------------------------------------------
+  maestro-smoke:
+    name: Maestro smoke (critical subset)
+    runs-on: macos-15
+    needs: unit-tests
+    if: github.event_name != 'schedule'
+    timeout-minutes: 30
+    env:
+      MAESTRO_FLOWS: |
+        .maestro/01-happy-path.yaml
+        .maestro/06-landscape.yaml
+        .maestro/02-search-empty.yaml
+        .maestro/09-hotels-empty.yaml
+        .maestro/07-search-failed-retry.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-xcode16-${{ hashFiles('project.yml', 'Sources/**') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-xcode16-
+
+      - name: Cache Maestro
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-${{ runner.os }}-v1
+          restore-keys: |
+            maestro-${{ runner.os }}-
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Regenerate Xcode project
+        run: xcodegen generate
+
+      - name: Install openjdk@17 (Maestro requires JDK)
+        run: |
+          brew install openjdk@17
+          # GitHub macOS runners (Apple Silicon): Homebrew lives at /opt/homebrew
+          JAVA_HOME_PATH="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
+          echo "JAVA_HOME=$JAVA_HOME_PATH" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_PATH/bin" >> "$GITHUB_PATH"
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Maestro
+        run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
+          maestro --version
+
+      - name: Boot simulator (iPhone 16 Pro, iOS 18)
+        id: boot-sim
+        run: |
+          # Resolve a simulator matching name + OS — never hardcode the UDID.
+          DEVICE_JSON=$(xcrun simctl list devices --json)
+          UDID=$(echo "$DEVICE_JSON" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devs in data['devices'].items():
+              if 'iOS-18' not in runtime:
+                  continue
+              for d in devs:
+                  if d.get('name') == '${SIM_NAME}' and d.get('isAvailable'):
+                      print(d['udid']); sys.exit(0)
+          sys.exit(1)
+          ")
+          if [ -z "$UDID" ]; then
+            echo "::error::Could not find iPhone 16 Pro / iOS 18 simulator on this runner"
+            xcrun simctl list devices
+            exit 1
+          fi
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build app for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project ResortPass.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.boot-sim.outputs.udid }}" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify || (echo "::error::build-for-testing failed" && exit 1)
+
+      - name: Locate built .app
+        id: app
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products -name "ResortPass.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::ResortPass.app not found after build"
+            find build/DerivedData/Build/Products -maxdepth 3 -type d
+            exit 1
+          fi
+          echo "Found app at: $APP_PATH"
+          echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Install app on simulator
+        run: |
+          xcrun simctl install "${{ steps.boot-sim.outputs.udid }}" "${{ steps.app.outputs.app_path }}"
+
+      - name: Launch app once (warm boot)
+        run: |
+          xcrun simctl launch "${{ steps.boot-sim.outputs.udid }}" "$BUNDLE_ID" || true
+          sleep 3
+          xcrun simctl terminate "${{ steps.boot-sim.outputs.udid }}" "$BUNDLE_ID" || true
+
+      - name: Run Maestro smoke flows
+        run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
+          mkdir -p .maestro/screenshots
+          FAILED=0
+          while IFS= read -r FLOW; do
+            [ -z "$FLOW" ] && continue
+            echo "::group::Maestro flow $FLOW"
+            if ! maestro --udid "${{ steps.boot-sim.outputs.udid }}" test "$FLOW"; then
+              echo "::error::Maestro flow failed: $FLOW"
+              FAILED=1
+            fi
+            echo "::endgroup::"
+          done <<EOF
+          ${{ env.MAESTRO_FLOWS }}
+          EOF
+          exit $FAILED
+
+      - name: Upload Maestro artifacts (screenshots + logs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-smoke-artifacts
+          path: |
+            .maestro/screenshots
+            ~/.maestro/tests
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Job 3: maestro-full — all 81 flows, scheduled + manual only
+  # ---------------------------------------------------------------------------
+  maestro-full:
+    name: Maestro full suite (scheduled / manual)
+    runs-on: macos-15
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: deriveddata-${{ runner.os }}-xcode16-${{ hashFiles('project.yml', 'Sources/**') }}
+          restore-keys: |
+            deriveddata-${{ runner.os }}-xcode16-
+
+      - name: Cache Maestro
+        uses: actions/cache@v4
+        with:
+          path: ~/.maestro
+          key: maestro-${{ runner.os }}-v1
+          restore-keys: |
+            maestro-${{ runner.os }}-
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Regenerate Xcode project
+        run: xcodegen generate
+
+      - name: Install openjdk@17
+        run: |
+          brew install openjdk@17
+          JAVA_HOME_PATH="$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home"
+          echo "JAVA_HOME=$JAVA_HOME_PATH" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_PATH/bin" >> "$GITHUB_PATH"
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Boot simulator
+        id: boot-sim
+        run: |
+          DEVICE_JSON=$(xcrun simctl list devices --json)
+          UDID=$(echo "$DEVICE_JSON" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devs in data['devices'].items():
+              if 'iOS-18' not in runtime:
+                  continue
+              for d in devs:
+                  if d.get('name') == '${SIM_NAME}' and d.get('isAvailable'):
+                      print(d['udid']); sys.exit(0)
+          sys.exit(1)
+          ")
+          if [ -z "$UDID" ]; then
+            echo "::error::Could not find iPhone 16 Pro / iOS 18 simulator on this runner"
+            xcrun simctl list devices
+            exit 1
+          fi
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build app for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build-for-testing \
+            -project ResortPass.xcodeproj \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.boot-sim.outputs.udid }}" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify || (echo "::error::build-for-testing failed" && exit 1)
+
+      - name: Install app on simulator
+        run: |
+          APP_PATH=$(find build/DerivedData/Build/Products -name "ResortPass.app" -type d | head -n 1)
+          xcrun simctl install "${{ steps.boot-sim.outputs.udid }}" "$APP_PATH"
+
+      - name: Run ALL Maestro flows
+        run: |
+          export PATH="$HOME/.maestro/bin:$PATH"
+          mkdir -p .maestro/screenshots
+          maestro --udid "${{ steps.boot-sim.outputs.udid }}" test .maestro/ --format junit --output maestro-report.xml
+
+      - name: Upload full Maestro artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-full-artifacts
+          path: |
+            .maestro/screenshots
+            ~/.maestro/tests
+            maestro-report.xml
+          if-no-files-found: ignore
+          retention-days: 30
