@@ -10,7 +10,7 @@ Two-screen iOS app for the ResortPass Founding iOS Engineer interview. Search a 
 
 ## Get it running
 
-**Requirements.** Xcode 15+ (for iOS 17 SDK and the `@Observable` macro). An iOS Simulator running iOS 17 or later. No other tooling needed — the `.xcodeproj` is committed alongside its `project.yml`, the Kingfisher package version is pinned via `Package.resolved`, and the custom Playfair Display fonts ship in the repo.
+**Requirements.** Xcode 15 or later (needed for the iOS 17 SDK and the `@Observable` macro). An iOS Simulator running iOS 17 or later. Nothing else — the `.xcodeproj` is committed with its `project.yml`, the Kingfisher package version is pinned in `Package.resolved`, and the Playfair Display fonts ship in the repo.
 
 ```bash
 git clone https://github.com/<your-fork>/mobile-interview-test.git
@@ -18,9 +18,9 @@ cd mobile-interview-test
 open ResortPass.xcodeproj
 ```
 
-In Xcode: pick **iPhone 16 Pro / iOS 18** as the simulator (canonical target), then `Cmd+R` to build and run, `Cmd+U` to run the test suite. First build takes ~30 seconds longer while Xcode resolves Kingfisher; subsequent builds are cached.
+In Xcode: pick **iPhone 16 Pro / iOS 18** as the simulator (the canonical target), then `Cmd+R` to build and run, `Cmd+U` to run the test suite. The first build takes about 30 seconds longer while Xcode resolves Kingfisher; later builds are cached.
 
-Or via the included `Makefile`, which pins the same simulator:
+Or use the `Makefile`, which pins the same simulator:
 
 ```bash
 make build    # xcodebuild for iPhone 16 Pro / iOS 18
@@ -29,17 +29,17 @@ make lint     # grep-gate on .animation(...) bindings
 make clean    # nuke DerivedData
 ```
 
-**Running Maestro flows locally** (optional — the 81 flows are CI-verified, but you can run them yourself):
+**Running Maestro flows locally** (optional — CI already runs all 81 flows, but you can run them yourself):
 
 ```bash
-brew install openjdk@17                                                  # Maestro requires Java
+brew install openjdk@17                                                  # Maestro needs Java
 curl -fsSL https://get.maestro.mobile.dev | bash                         # one-time install
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 maestro test .maestro/01-happy-path.yaml                                 # one flow
-maestro test .maestro/                                                   # the full 81
+maestro test .maestro/                                                   # all 81
 ```
 
-Maestro flows assume **iPhone 16 Pro / iOS 18** — they fail on iOS 26 due to a Maestro driver incompatibility (documented in §9).
+Maestro flows assume **iPhone 16 Pro / iOS 18** — they fail on iOS 26 because of a Maestro driver bug (see §9).
 
 ---
 
@@ -63,12 +63,12 @@ Real staging API. iPhone 16 Pro / iOS 18.
 
 ### Signature motion
 
-Two animations are easier to feel than describe — the morph from a tapped card into detail, and the parallax response when you pull down the sticky header inside detail. Drop `.mov` / `.mp4` files at `docs/media/morph-transition.mp4` and `docs/media/parallax-hero.mp4` and they auto-embed below.
+Two animations are easier to feel than describe: the morph from a tapped card into detail, and the sticky-header parallax when you pull down inside detail. Drop `.mov` / `.mp4` files at `docs/media/morph-transition.mp4` and `docs/media/parallax-hero.mp4` and they embed below automatically.
 
 <video src="docs/media/morph-transition.mp4" controls width="380"></video>
 <video src="docs/media/parallax-hero.mp4" controls width="380"></video>
 
-The morph is the iOS 18 zoom transition with an iOS 17 fallback path. The parallax hero stretches via a damped rubber-band response driven by `CADisplayLink` at 120 Hz on ProMotion. If video files aren't present yet, `maestro test .maestro/01-happy-path.yaml` reproduces the morph; `15-swipe-down-dismiss-rubber-band.yaml` exercises the parallax.
+The morph is the iOS 18 zoom transition, with an iOS 17 fallback path. The parallax header stretches with a damped rubber-band feel, driven by `CADisplayLink` at 120 Hz on ProMotion. If the video files aren't there yet, `maestro test .maestro/01-happy-path.yaml` shows the morph; `15-swipe-down-dismiss-rubber-band.yaml` shows the parallax.
 
 ---
 
@@ -76,11 +76,11 @@ The morph is the iOS 18 zoom transition with an iOS 17 fallback path. The parall
 
 ## What this is, in 15 seconds
 
-> **The app.** Two screens: autocomplete search → place selection → hotel listings in sectioned horizontal carousels. Detail screen morphs in from the tapped card and dismisses via a drag-throw spring. Against the real staging API, light + dark, English + Spanish stub.
+> **The app.** Two screens: autocomplete search → place selection → hotel listings in sectioned horizontal carousels. The detail screen morphs in from the tapped card and dismisses with a drag-throw spring. Real staging API, light and dark, English with a Spanish stub.
 
-> **What's notable.** Function-style `Sendable` clients (one-line test swap, no protocol ceremony). A small transport orchestration layer centralizes cross-cutting concerns so feature clients stay ~10 lines. iOS 18 matched-transition-source morph with an iOS 17 fallback. 120 unit tests pin spec compliance + lossy decode behavior; 81 Maestro flows cover state cycles, animation audits, dark mode, AX5, German truncation, VoiceOver, and the launch-arg-injected failure UIs.
+> **What's notable.** Function-style `Sendable` clients (one-line test swap, no protocol ceremony). A small orchestration layer holds the transport's cross-cutting work in one place, so each feature client stays around 10 lines. The detail morph uses iOS 18's matched-transition-source with an iOS 17 fallback. 120 unit tests pin spec compliance and lossy decode behavior; 81 Maestro flows cover state cycles, animation audits, dark mode, AX5, German truncation, VoiceOver, and the failure UIs that launch arguments inject.
 
-> **What didn't ship.** Snapshot testing, pull-to-refresh, pagination, full localization catalogs — all documented in §13–§14 with rough effort estimates.
+> **What didn't ship.** Snapshot testing, pull-to-refresh, pagination, full localization catalogs — all listed in §13–§14 with rough time estimates.
 
 ---
 
@@ -88,26 +88,33 @@ The morph is the iOS 18 zoom transition with an iOS 17 fallback path. The parall
 
 ## How it's built
 
-Hand-rolled MVI with `@Observable`. Every feature owns four pieces: a **State** struct with an exhaustive `Status` enum (idle, loading, loaded, empty, failed, plus a feature-specific failure case where it earned one), an **Intent** enum naming every mutation, a `@MainActor` **ViewModel** whose sync reducer is the only thing that mutates state, and a **Client** — a `Sendable struct` whose fields are `@Sendable async throws` closures. Test swap is one-liner; no protocol-conformance ceremony per variant.
+Hand-rolled MVI with `@Observable`. Every feature owns four pieces:
+
+- a **State** struct with a `Status` enum that covers every state (idle, loading, loaded, empty, failed, plus a feature-specific failure case when one's warranted),
+- an **Intent** enum that names every mutation,
+- a `@MainActor` **ViewModel** whose sync reducer is the only thing that mutates state,
+- and a **Client** — a `Sendable struct` whose fields are `@Sendable async throws` closures.
+
+Test swap is one line; no protocol-conformance work per test variant.
 
 ```
 View → vm.send(.intent) → reducer (sync) → state mutation
                                        └→ Task { client.fetch() } → state mutation on completion
 ```
 
-The reducer is synchronous and pure. The only side effect is spawning a `Task` for the network call, which checks cancellation at every async seam. A stale-response guard protects against a slow response landing after the user has typed a new query. Cancellation from the system surfaces as `URLError(.cancelled)`; a small translation helper rewrites it to `CancellationError` so view-model catch arms see one uniform shape.
+The reducer is synchronous and pure. The only side effect is spawning a `Task` for the network call, which checks cancellation at every async seam. A stale-response guard catches slow responses that land after the user has typed a new query. Cancellation from the system shows up as `URLError(.cancelled)`; a small helper rewrites it to `CancellationError` so view-model catch arms see one shape.
 
 ### Networking layer
 
-Two endpoints, one transport seam. A small `HTTPClient` wraps `URLSession` and centralizes status validation + injectable transport (URLProtocol-stubbable for tests). On top of that sits a single transport orchestration helper that owns the cross-cutting concerns each endpoint would otherwise duplicate: structured logging at initiation / completion / failure, post-network and post-decode cancellation checks, decode-error wrapping, URL-level cancellation translation. As a result, the feature clients each read as ~10 lines of code that describe the *what* of the request — build URL, build body, dispatch — and nothing about the *how* of the transport.
+Two endpoints, one transport seam. A small `HTTPClient` wraps `URLSession` and centralizes status checks plus injectable transport (so tests can stub it via `URLProtocol`). On top of that sits a single orchestration helper that owns the work each endpoint would otherwise duplicate: structured logging at start, end, and on failure; cancellation checks after the network call and after decode; decode-error wrapping; translating cancellation that comes from the URL layer. As a result, each feature client reads as ~10 lines that describe *what* the request does — build URL, build body, dispatch — and not how the transport works.
 
-The layer is typed end-to-end. Raw HTTP method strings, header names, content types, and log event names are all small enums with helper extensions on `URLRequest`. The POST body for the hotels endpoint is a typed `Encodable` struct, not `[String: Any]` + `JSONSerialization`. Array decoding is lossy by default — one malformed `Place` or `Hotel` row drops to nil without nuking the whole response. Decode errors are wrapped in a domain error variant so the view-model boundary sees a uniform error taxonomy that knows how to classify retryability.
+The layer is typed end-to-end. Raw HTTP method strings, header names, content types, and log event names are all small enums with helper extensions on `URLRequest`. The POST body for the hotels endpoint is a typed `Encodable` struct, not `[String: Any]` + `JSONSerialization`. Array decoding is lossy by default — one malformed `Place` or `Hotel` row drops to nil without breaking the rest of the response. Decode errors are wrapped in our own error type, so the view-model boundary sees one error type that already knows which errors are retryable.
 
 ### Navigation
 
-`NavigationStack(path:)` with a value-based `AppDestination` enum. The path is bound to `state.path` via a binding whose setter dispatches a `.pathChanged` intent — pushes and pops both flow through the reducer, preserving the unidirectional invariant. The detail screen uses iOS 18's matched-transition-source + zoom navigation transition as the primary morph; iOS 17 falls back to `matchedGeometryEffect` + a `ZStack` overlay path. Both paths compile against the iOS 17 SDK via an `@available`-gated modifier.
+`NavigationStack(path:)` with a value-based `AppDestination` enum. The path is bound to `state.path` through a binding whose setter dispatches a `.pathChanged` intent — pushes and pops both flow through the reducer, which keeps the one-way data flow intact. On iOS 18, the detail screen uses matched-transition-source + the system zoom navigation transition as the main morph. On iOS 17, it falls back to `matchedGeometryEffect` + a `ZStack` overlay. Both paths compile against the iOS 17 SDK through an `@available` gate.
 
-> **Why MVI, not TCA or MVVM.** For two screens, TCA's framework dependency and learning surface didn't justify the cost. MVI captures the same essentials — unidirectional flow, explicit intent enum, replayable transitions, sync reducer, structured concurrency for side effects — without the third-party dependency. MVVM with `@Observable` would also work; I prefer the explicit intent enum because every state mutation becomes discoverable in one place (the reducer's `switch`).
+> **Why MVI, not TCA or MVVM.** For two screens, TCA's framework dependency and learning surface didn't justify the cost. MVI captures the same essentials — one-way flow, an explicit intent enum, replayable transitions, a sync reducer, structured concurrency for side effects — without the third-party dependency. MVVM with `@Observable` would also work; I prefer the explicit intent enum because every state change shows up in one place (the reducer's `switch`).
 
 ---
 
@@ -115,19 +122,19 @@ The layer is typed end-to-end. Raw HTTP method strings, header names, content ty
 
 ## What earned an ADR
 
-Nine decisions warranted a written record — anything where a future contributor would otherwise ask "why this and not the other thing?" Full text lives in [`docs/ADRs.md`](docs/ADRs.md); below is the one-liner index.
+Nine decisions earned a written record — anywhere a future contributor would otherwise ask "why this and not the other thing?" Full text is in [`docs/ADRs.md`](docs/ADRs.md); the one-liner index is below.
 
 | | Decision | Why it earned an ADR |
 |---|---|---|
-| **001** | Hand-rolled MVI, not TCA | Framework cost > value at N=2 screens; unidirectional flow + explicit intent enum capture the essentials without ceremony. |
+| **001** | Hand-rolled MVI, not TCA | Framework cost > value at N=2 screens; one-way flow + an explicit intent enum capture the essentials without ceremony. |
 | **002** | iOS 17 deployment target | Each iOS-17-only API saves 30–60 lines of `#available` branching versus iOS 16. |
-| **003** | Function-style clients, not protocols | At N=1 operation per client, protocols add ceremony with no payoff. Includes a 3-way steelman vs the generic-Endpoint approach + a migration sketch past N=4 endpoints. |
+| **003** | Function-style clients, not protocols | At N=1 operation per client, protocols add ceremony with no payoff. Includes a 3-way comparison vs the generic-Endpoint approach and a migration sketch for past N=4 endpoints. |
 | **004** | Sweep I reverted | A "math-equivalent" parallax rewrite interacted badly with `.scaledToFill` on the hero. Honest revert. |
 | **005** | Dismiss-no-refetch guard | Status-gated `.appeared` prevents skeleton flash on pop-back from detail; retry stays unconditional. Pinned by a regression test. |
-| **006** | Scene-phase staleness — 5 minutes | Balances "briefly switched to Messages" (no refetch) vs "came back hours later" (real stale-data risk). |
-| **007** | Value-bound animation, not `PhaseAnimator` | iOS 18 zoom transition re-instantiates the destination view, desyncing the phase index from a preserved `@State` trigger. |
+| **006** | Scene-phase staleness — 5 minutes | Balances "briefly switched to Messages" (no refetch) against "came back hours later" (real stale-data risk). |
+| **007** | Value-bound animation, not `PhaseAnimator` | The iOS 18 zoom transition recreates the destination view, which desyncs the phase index from a preserved `@State` trigger. Value binding has no internal state to desync. |
 | **008** | Composition-root value bundling all clients | One file, full dependency graph; previews default to fixture clients so they never accidentally hit staging. |
-| **009** | Sectioned horizontal carousels for Hotel Listings | Hospitality search is image-led; the spec's vertical list forfeits the curation signal that differentiates a day-pass marketplace. |
+| **009** | Sectioned horizontal carousels for Hotel Listings | Hospitality search is image-led; the spec's vertical list loses the curation signal that makes a day-pass marketplace feel different from a generic directory. |
 
 ---
 
@@ -139,11 +146,11 @@ Three feature surfaces. Each gets a lead sentence, the notable design choice, an
 
 ### Search — *autocomplete with a real failure mode*
 
-**An autocomplete search bar with three terminal states.** Idle, loading, loaded, empty, failed — and a fourth dedicated *null-coordinates* failure for places where the staging API doesn't have lat/lng. Brooklyn, Florida is the canonical example.
+**A search bar with autocomplete and five primary states.** Idle, loading, loaded, empty, failed — plus a dedicated *null-coordinates* failure for places where the staging API doesn't have lat/lng. Brooklyn, Florida is the canonical example.
 
-The 500 ms debounce runs through an injected `ContinuousClock` so tests don't sleep for real wall-clock time. The failure-state CTA is "Search a nearby city" for the null-coord case rather than a generic "Try Again" loop that would re-pick the same offending place.
+The 500 ms debounce runs through an injected `ContinuousClock`, so tests don't actually have to sleep. The failure-state CTA for the null-coord case is "Search a nearby city" instead of a generic "Try Again" loop that would re-pick the same offending place.
 
-> **Maestro caught a real bug here.** In landscape, the on-screen keyboard occluded the retry CTA in failed/empty states. Fixed via auto-dismiss of the keyboard on status change.
+> **Maestro caught a real bug here.** In landscape, the on-screen keyboard covered the retry CTA in failed and empty states. Fixed by auto-dismissing the keyboard on status change.
 
 <sub>**Tests** — 11 reducer · 21 spec compliance · 6 direct live-client</sub>
 
@@ -151,21 +158,21 @@ The 500 ms debounce runs through an injected `ContinuousClock` so tests don't sl
 
 **Above the fold: a parallax stretchy hero, a filter chip row, then sectioned horizontal carousels.** `Top picks` (≤5 by rating) · `Within walking distance` (≤1.5 mi) · `Best value` (cheapest 5) · `All` fallback.
 
-The section pipeline is a pure builder cached on the loaded state — it rebuilds only when hotels or active filter mutate, never per render. Filters cover All / Pool / Spa / Adults / Pets / Wellness via string-match heuristics against the hotel's product name and primary vibe; the API doesn't expose canonical filter categories.
+The section pipeline is a pure builder cached on the loaded state — it rebuilds only when the hotels or the active filter change, never per render. Filters cover All / Pool / Spa / Adults / Pets / Wellness via simple string matching against the hotel's product name and primary vibe; the API doesn't expose its own filter categories.
 
-Cache warming runs in two windows: the first 30 cards on `.loaded`, the next four detail-carousel images on card tap.
+Cache warming runs in two windows: the first 30 cards when the listings load, the next four detail-carousel images when the user taps a card.
 
-> **Why this and not a vertical list.** Hospitality search is image-led. Full reasoning in **§12** + [ADR-009](docs/ADRs.md).
+> **Why this and not a vertical list.** Hospitality search is image-led. Full reasoning in **§12** and [ADR-009](docs/ADRs.md).
 
 <sub>**Tests** — 5 reducer · 11 section-pipeline · 9 direct live-client</sub>
 
 ### Hotel detail — *the signature animation surface*
 
-**A pushed-mode scene that morphs in from the tapped card.** iOS 18 path uses matched-transition-source + the system zoom navigation transition. iOS 17 falls back to `matchedGeometryEffect` + a `ZStack` overlay. Both paths compile against the iOS 17 SDK via an `@available`-gated modifier.
+**A pushed scene that morphs in from the tapped card.** On iOS 18, the morph uses matched-transition-source + the system zoom navigation transition. On iOS 17, it falls back to `matchedGeometryEffect` + a `ZStack` overlay. Both paths compile against the iOS 17 SDK via an `@available` gate.
 
-The sticky header parallaxes on pull-down with a damped scale. Dismiss is a drag-throw with rubber-band response, integrated via `CADisplayLink` to run at the native display refresh — 120 Hz on ProMotion.
+The sticky header runs a parallax on pull-down, with a damped scale. Dismiss is a drag-throw with a rubber-band response, driven by `CADisplayLink` so it runs at the native refresh rate — 120 Hz on ProMotion.
 
-The image carousel inside uses a peek + mid-snap layout; its caching processor identifier matches the upstream Kingfisher prefetch so the morph never decodes on demand.
+The image carousel inside uses a peek + mid-snap layout; its caching processor matches what the Kingfisher prefetch uses upstream, so the morph never has to decode an image at run time.
 
 <sub>**Pinned by Maestro flows** — `14-card-detail-morph-spring-envelope`, `15-swipe-down-dismiss-rubber-band`, `20-hero-stretch-pulldown`, `21-content-fade-in-detail`</sub>
 
@@ -178,10 +185,10 @@ The image carousel inside uses a peek + mid-snap layout; its caching processor i
 Things the staging API does that shaped the model layer:
 
 - The autocomplete response is a **top-level array**, not wrapped in an object.
-- Some places (Brooklyn FL is the canonical one) return null lat/lng. Tapping them would send `0,0` to the hotels endpoint and get unrelated results — the VM guards and surfaces a dedicated failure state.
-- **Integer `id` collisions are real** — Newport Beach and Newport Coast share `id=236` because Coast is an alias. The model maps `Identifiable.id` to the stable string `objectID` so `ForEach` doesn't silently drop duplicates.
-- The hotels response wraps currency as a nested object, encodes images as nested URL records (the decoder picks the largest available), and ships both a human-friendly `rating` and a frequently-zero `avg_rating` — the model uses the former. Cheapest price is computed from the products array.
-- **Lossy array decode is the default.** A single malformed row drops to nil rather than nuking the whole response.
+- Some places (Brooklyn FL is the canonical one) return null lat/lng. Tapping them would send `0,0` to the hotels endpoint and return unrelated results — the VM guards and shows a dedicated failure state instead.
+- **Integer `id` collisions are real.** Newport Beach and Newport Coast share `id=236` because Coast is an alias. The model maps `Identifiable.id` to the stable string `objectID` so `ForEach` doesn't silently drop duplicates.
+- The hotels response wraps currency as a nested object, encodes images as nested URL records (the decoder picks the largest), and ships both a human-friendly `rating` and a frequently-zero `avg_rating` — the model uses `rating`. Cheapest price is computed from the products array.
+- **Lossy array decode is the default.** One malformed row drops to nil rather than breaking the whole response.
 
 ---
 
@@ -189,22 +196,22 @@ Things the staging API does that shaped the model layer:
 
 ## Technical choices
 
-A flat matrix of the decisions you'd otherwise have to dig through code to reconstruct. Each row links its rationale into an ADR where there's depth worth defending.
+A flat matrix of the decisions you'd otherwise have to dig through code to reconstruct. Each row points to an ADR where there's depth worth defending.
 
 | Concern | Choice | Why |
 |---|---|---|
 | **UI framework** | SwiftUI primary, UIKit at 6 specific seams | Spec requires SwiftUI primary; UIKit appears only where SwiftUI doesn't yet reach — status-bar coordination on iOS 17, CoreAnimation-side chip pulse, scale-aware hairlines, the Metal/MPS image grader, and the 120 Hz drag-throw spring. |
-| **Concurrency** | `async/await` + `Task` + `ContinuousClock` | Injectable clock makes the 500ms debounce testable without timing flakes. |
-| **Networking** | `URLSession` wrapped in a `Sendable` transport seam + one orchestration helper | Two endpoints don't justify Alamofire. The helper centralizes everything cross-cutting. |
+| **Concurrency** | `async/await` + `Task` + `ContinuousClock` | An injectable clock lets the 500 ms debounce be tested without timing flakes. |
+| **Networking** | `URLSession` wrapped in a `Sendable` transport seam + one orchestration helper | Two endpoints don't justify Alamofire. The helper holds the cross-cutting work in one place. |
 | **State management** | Hand-rolled MVI with `@Observable` | See **§4** for the full reasoning. |
 | **Dependency Injection** | Manual constructor injection + a composition-root value | One file to read for the full dependency graph. [ADR-008](docs/ADRs.md). |
 | **Client shape** | Function-style: `Sendable struct` of `@Sendable` closures | Swap-for-test is one line. [ADR-003](docs/ADRs.md). |
-| **Navigation** | `NavigationStack(path:)` with value-based `AppDestination` | Type-safe deep-link surface; mutations flow through the reducer. |
-| **Data modeling** | `Codable` with explicit `CodingKeys` | The wire has mixed-case keys; auto-conversion gets it wrong. |
-| **Defensive decoding** | Lossy array decode by default | One malformed row drops to nil rather than nuking the response. |
-| **Image caching** | Kingfisher 8.x + custom editorial-grade processor (Core Image + Metal/MPS fallback) | Grade runs once per URL, cached on processor identifier. Two cache-warming windows. |
-| **Minimum iOS** | 17.0 | Lifted from spec floor of 16 for `@Observable`, `ContentUnavailableView`, value-based path, `ContinuousClock`. [ADR-002](docs/ADRs.md). |
-| **Localization** | `String(localized:)` with `defaultValue:` for every user string | Catalog drops in cleanly; Spanish stub exists demonstrating resolution. |
+| **Navigation** | `NavigationStack(path:)` with a value-based `AppDestination` | Type-safe deep links; mutations flow through the reducer. |
+| **Data modeling** | `Codable` with explicit `CodingKeys` | Auto-conversion is wrong for this wire shape (mixed-case keys). |
+| **Defensive decoding** | Lossy array decode by default | One malformed row drops to nil rather than breaking the response. |
+| **Image caching** | Kingfisher 8.x + a custom editorial-grade processor (Core Image + Metal/MPS fallback) | The grade runs once per URL, cached by processor identifier. Two cache-warming windows. |
+| **Minimum iOS** | 17.0 | Lifted from the spec floor of 16 to use `@Observable`, `ContentUnavailableView`, the value-based path, and `ContinuousClock`. [ADR-002](docs/ADRs.md). |
+| **Localization** | `String(localized:)` with `defaultValue:` for every user string | A catalog drops in cleanly; a Spanish stub exists to show that resolution works. |
 
 ### UIKit drops
 
@@ -212,11 +219,11 @@ Six deliberate seams where UIKit earns its keep:
 
 | Seam | UIKit surface | Why |
 |---|---|---|
-| Status-bar bridge | `UIHostingController` with `preferredStatusBarStyle` | No native SwiftUI status-bar coordination during morph on iOS 17. Gated to iOS < 18. |
+| Status-bar bridge | `UIHostingController` with `preferredStatusBarStyle` | No native SwiftUI status-bar coordination during the morph on iOS 17. Gated to iOS < 18. |
 | Transition adapters (4 files) | `UIPresentationController` + percent-driven + animated transitioning | iOS 17 fallback morph scaffolding. |
-| Filter-chip pulse | `UIViewRepresentable` over `CALayer` + `CABasicAnimation` | Frame-precise, vBlank-aligned, distinct from SwiftUI's transaction system. |
+| Filter-chip pulse | `UIViewRepresentable` over `CALayer` + `CABasicAnimation` | Frame-precise, vBlank-aligned — distinct from SwiftUI's transaction system. |
 | Hairline tokens | `UIScreen.main.scale` | Physical-pixel-crisp hairline width. |
-| Editorial-grade processor | `UIImage` + Core Image + Metal/MPS | Kingfisher's processor takes `UIImage`. Metal on cache miss; Core Image fallback. |
+| Editorial-grade processor | `UIImage` + Core Image + Metal/MPS | Kingfisher's processor takes `UIImage`. Metal on cache miss; Core Image as fallback. |
 | Drag-throw spring | `CADisplayLink` | 120 Hz spring integration on ProMotion. [ADR-007](docs/ADRs.md). |
 
 ---
@@ -230,7 +237,7 @@ unit:    120 tests across 12 files · ~20s · iPhone 16 Pro / iOS 18
 maestro: 81 flows · real staging API · launch-arg-injected failure variants
 ```
 
-**Unit coverage spans** reducer behavior per feature, spec-pinning (500 ms debounce timing, dismiss-no-refetch regression, scene-phase staleness, presentation transitions), URLProtocol-stubbed transport, every URL endpoint vs the spec verbatim (including percent-encoding + CJK), every `URLError` mapping, direct coverage of the live client factories (so the transport orchestration helper is verified end-to-end, not just through the view-model seam), the section-builder pipeline, the logging surface, and real-fixture decoding plus adversarial inputs for both `Place` and `Hotel`.
+**The unit suite** covers reducer behavior per feature; spec-pinning tests for the 500 ms debounce timing, the dismiss-no-refetch regression, scene-phase staleness, and presentation transitions; the transport seam (stubbed via `URLProtocol`); every URL endpoint matched against the spec verbatim (percent-encoding and CJK included); every `URLError` mapping; direct tests against the live client factories — so the orchestration helper is verified end-to-end, not just through the view-model seam; the section-builder pipeline; the logging surface; and decoder tests against real API fixtures plus deliberately-broken inputs for both `Place` and `Hotel`.
 
 ### Maestro by category
 
@@ -252,17 +259,17 @@ maestro: 81 flows · real staging API · launch-arg-injected failure variants
 | iPad | 2 | Hotels loaded + detail expanded (out of spec but flow-verified) |
 | Other | 3 | Coordinate-tap regression (system back button), image-load timing |
 
-Flows use real on-screen text assertions, named screenshot checkpoints, and timeout-bounded waits. The runner exits non-zero on any missed assertion or app crash — the flow IS the test, no separate diff/compare harness is needed. Launch arguments inject failure-state client variants so every error UI is reachable without disrupting the staging API.
+Flows use real on-screen text assertions, named screenshot checkpoints, and waits with timeouts. The runner exits non-zero on any missed assertion or app crash — the flow IS the test, no separate diff or compare setup is needed. Launch arguments inject failure-state clients so every error UI is reachable without disrupting the staging API.
 
 ### Three real bugs Maestro caught
 
-- **Landscape keyboard occluded the retry CTA** in compact-height layouts. Fixed via auto-dismiss on status change.
-- **iOS 26 + Maestro 2.5.1** — the Maestro driver can't walk the iOS 26 SwiftUI accessibility tree (`assertVisible` on body text fails while the app renders identically on iOS 18). Maestro work pinned to iOS 18 sim until upstream resolves.
-- **Null-coordinate dead-end** — selecting an alias-only place would otherwise loop the user into a re-failure with no recovery affordance. Pinned by paired happy-path and null-coords flows.
+- **Landscape keyboard covered the retry CTA** in compact-height layouts. Fixed by auto-dismiss on status change.
+- **iOS 26 + Maestro 2.5.1** — the Maestro driver can't walk the iOS 26 SwiftUI accessibility tree (`assertVisible` on body text fails while the app looks identical on iOS 18). Maestro work is pinned to the iOS 18 sim until Maestro fixes this upstream.
+- **Null-coordinate dead-end** — selecting an alias-only place would otherwise trap the user in a re-failure with no way out. Pinned by paired happy-path and null-coords flows.
 
 ### Snapshot testing
 
-Not implemented in this submission. Listed in **§14** — `swift-snapshot-testing` for the state × portrait/landscape × light/dark matrix would close the visual-regression gap that Maestro's text-assertion model can't directly cover.
+Not implemented in this submission. Listed in **§14** — `swift-snapshot-testing` for the state × portrait/landscape × light/dark matrix would close the visual-regression gap that Maestro's text-only assertions can't cover.
 
 ---
 
@@ -270,7 +277,7 @@ Not implemented in this submission. Listed in **§14** — `swift-snapshot-testi
 
 ## Continuous Integration
 
-GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Three jobs:
+A GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Three jobs:
 
 | Job | Trigger | Duration | Gate |
 |---|---|---|---|
@@ -278,7 +285,7 @@ GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml
 | **Maestro smoke** | Every push + PR (after unit tests) | ~5–10 min | Five critical flows |
 | **Maestro full** | Weekly + manual dispatch | ~30–40 min | All 81 Maestro flows |
 
-xcresult bundles and Maestro screenshots upload as workflow artifacts on failure. Concurrency control cancels in-progress runs when a new commit lands on the same ref. Maestro in CI uses the same fail-on-missed-assertion model as local runs — flows hit the real staging API, so a staging outage will fail CI (accepted trade-off for high-fidelity coverage; flagged in the workflow's top comment).
+`xcresult` bundles and Maestro screenshots upload as workflow artifacts on failure. Concurrency control cancels in-progress runs when a new commit is pushed to the same branch. Maestro in CI uses the same fail-on-missed-assertion model as running locally — flows hit the real staging API, so a staging outage will fail CI (an accepted trade-off for real-world coverage; flagged in the workflow's top comment).
 
 ---
 
@@ -288,15 +295,15 @@ xcresult bundles and Maestro screenshots upload as workflow artifacts on failure
 
 **What's in.** VoiceOver labels on every interactive element. Five concrete moves:
 
-- Hotel cards combine via `.accessibilityElement(children: .combine)` so the rotor reads each card as a single element.
+- Hotel cards combine with `.accessibilityElement(children: .combine)` so the rotor reads each card as a single element.
 - Section headers carry the `.isHeader` trait so VoiceOver users can rotor-skim section by section.
-- Dynamic Type respected through `xxLarge` and into accessibility sizes via semantic font styles.
-- Empty + failed states use `ContentUnavailableView` — iOS 17 native, built-in traits.
-- Light/dark mode resolves through Asset Catalog semantic colorsets with both appearance variants.
+- Dynamic Type is respected through `xxLarge` and into the accessibility sizes via semantic font styles.
+- Empty and failed states use `ContentUnavailableView` — iOS 17 native, with built-in traits.
+- Light and dark mode resolve through Asset Catalog semantic colorsets with both appearance variants.
 
-Pinned end-to-end by dedicated Maestro flows for VoiceOver navigation, AX5 layout, Reduce Motion, Bold Text, and Increase Contrast.
+All of the above is pinned end-to-end by dedicated Maestro flows for VoiceOver navigation, AX5 layout, Reduce Motion, Bold Text, and Increase Contrast.
 
-**What's honestly missing.** No `AccessibilitySnapshot` integration for label/trait regression catching (deferred to §14). No automated VoiceOver navigation-order tests beyond the Maestro coverage. Dark theme contrast not formally WCAG-audited. Filter chip and clear-search tap areas sit on the HIG 44 pt boundary — flagged for an explicit audit pass.
+**What's honestly missing.** No `AccessibilitySnapshot` integration for label/trait regression catching (deferred to §14). No automated VoiceOver navigation-order tests beyond the Maestro coverage. Dark-theme contrast isn't formally WCAG-audited. The filter chip and clear-search tap areas sit on the HIG 44 pt boundary — flagged for an explicit audit pass.
 
 ---
 
@@ -307,10 +314,10 @@ Pinned end-to-end by dedicated Maestro flows for VoiceOver navigation, AX5 layou
 The interview prompt suggests *"vertical list (e.g., `List` or `LazyVStack` inside a `ScrollView`)"* for Screen 2. This app ships **sectioned horizontal carousels** instead. Three reasons:
 
 - Hospitality search is image-led. Wide, photo-dominant cards in a peek-carousel give every result equal first-class visual real estate — the rhythm of 2026-era travel apps (Airbnb, Hopper, Booking.com).
-- Sectioning by editorial axis (`Top picks` / `Within walking distance`) foregrounds curation, which is what differentiates a day-pass marketplace from a generic hotel directory.
-- A pure vertical list is the strictly compliant choice; this deviation prioritizes UX impression over verbatim spec adherence, which felt like the right founding-engineer call to surface explicitly.
+- Sectioning by editorial axis (`Top picks` / `Within walking distance`) puts curation up front, which is what differentiates a day-pass marketplace from a generic hotel directory.
+- A pure vertical list is the strictly compliant choice; this deviation prioritizes the UX impression over verbatim spec adherence, which felt like the right founding-engineer call to call out explicitly.
 
-Each card still surfaces hotel name, image, rating, and price — the spec's *"most relevant product/price information"* — so the information surface matches even when the layout doesn't. Documented in [ADR-009](docs/ADRs.md).
+Each card still shows hotel name, image, rating, and price — the spec's *"most relevant product/price information"* — so the information surface matches even when the layout doesn't. Documented in [ADR-009](docs/ADRs.md).
 
 ---
 
@@ -319,14 +326,14 @@ Each card still surfaces hotel name, image, rating, and price — the spec's *"m
 ## Known limitations
 
 - **Pagination** — both endpoints accept `limit` + `offset`; the UI doesn't paginate yet.
-- **Pull-to-refresh** on hotel listings is currently disabled (pinned by a Maestro flow that verifies absence).
-- **Offline behavior** — no caching of last-seen results; a network drop returns the user to `.failed` without a stale-data fallback.
-- **Localization** — plumbing in place; non-English catalogs not yet shipped.
-- **Extended product surface** — each hotel has multiple products with tiered prices; the UI shows only the cheapest + top-level product name.
+- **Pull-to-refresh** on hotel listings is currently disabled (pinned by a Maestro flow that checks for its absence).
+- **Offline behavior** — no caching of last-seen results; a network drop returns the user to `.failed` with no stale-data fallback.
+- **Localization** — plumbing is in place; non-English catalogs aren't shipped yet.
+- **Extended product surface** — each hotel has multiple products with tiered prices; the UI shows only the cheapest + the top-level product name.
 - **App icon + launch screen** — placeholder only.
 - **Snapshot testing** — not implemented; deferred to **§14**.
-- **iOS 26 + Maestro** — Maestro 2.5.1 can't walk the iOS 26 accessibility tree; Maestro work pinned to iOS 18 sim until resolved upstream.
-- **Recording infrastructure** — `simctl recordVideo` is broken on the current Xcode toolchain; the morph + parallax videos in **§2** require QuickTime manual recording until that lands upstream.
+- **iOS 26 + Maestro** — Maestro 2.5.1 can't walk the iOS 26 accessibility tree; Maestro work is pinned to the iOS 18 sim until Maestro fixes this upstream.
+- **Recording infrastructure** — `simctl recordVideo` is broken on the current Xcode toolchain; the morph + parallax videos in **§2** require QuickTime manual recording until that gets fixed upstream.
 
 ---
 
@@ -334,17 +341,17 @@ Each card still surfaces hotel name, image, rating, and price — the spec's *"m
 
 ## With more time
 
-Ordered roughly by interview-lens value-per-hour:
+Roughly in order of return-on-time:
 
 1. **Pull-to-refresh + pagination** on hotel listings via `refreshable {}` + offset bumping, with VM state for `loadingMore` and an infinite-scroll trigger threshold. ~2–3 h.
-2. **Snapshot test suite** — `swift-snapshot-testing` across every state × Search/Listings × portrait/landscape × light/dark. `AccessibilitySnapshot` on top for label/trait regressions. ~3–4 h.
-3. **Migration past N=4 endpoints** — generic `Endpoint<Response>` + single dispatcher (sketched in [ADR-003](docs/ADRs.md)). Centralizes retry, auth, telemetry. Not protocols.
-4. **Swift 6 typed throws** at the client signatures so the error taxonomy is encoded in the type system rather than via downcasts.
-5. **`AsyncSequence` debounce** via Async Algorithms instead of imperative `Task` + clock sleep.
+2. **Snapshot test suite** — `swift-snapshot-testing` across every state × Search/Listings × portrait/landscape × light/dark. `AccessibilitySnapshot` on top for label and trait regressions. ~3–4 h.
+3. **Migration past N=4 endpoints** — a generic `Endpoint<Response>` + a single dispatcher (sketched in [ADR-003](docs/ADRs.md)). Centralizes retry, auth, telemetry. Not protocols.
+4. **Swift 6 typed throws** at the client signatures, so the error taxonomy lives in the type system instead of runtime downcasts.
+5. **`AsyncSequence` debounce** via Async Algorithms instead of the imperative `Task` + clock sleep.
 6. **Maestro device matrix in CI** — iPhone SE / 15 / 17 Pro Max × portrait/landscape × themes on PRs.
-7. **Snapshot regression in CI** — fourth workflow job with diff images uploaded as artifacts.
+7. **Snapshot regression in CI** — a fourth workflow job with diff images uploaded as artifacts.
 8. **Recording-factory logger** so unit tests can assert on logger emissions per status transition.
-9. **Pre-commit hooks** (SwiftFormat or SwiftLint) so conventions don't drift.
+9. **Pre-commit hooks** (SwiftFormat or SwiftLint) so the conventions don't drift.
 10. **Localization catalogs** for at least Spanish and French.
 11. **Performance traces** for the morph hot path (Instruments + a target frame budget pinned in CI).
 12. **iOS 26 retest** once Maestro fixes the accessibility-tree gap.
@@ -383,4 +390,4 @@ Tests/
 
 ---
 
-<sub><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="docs/ADRs.md">docs/ADRs.md</a> · <a href=".github/workflows/ci.yml">CI workflow</a> · <a href=".maestro/">Maestro flows</a></sub>
+<sub><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="docs/ADRs.md">docs/ADRs.md</a> · <a href=".github/workflows/ci.yml">CI workflow</a> · <a href=".maestro/">Maestro flows</a> · <a href="ux-research/">UX research</a></sub>
