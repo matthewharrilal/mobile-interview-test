@@ -1,11 +1,31 @@
+<div align="center">
+
 # ResortPass — iOS
 
-> Two-screen iOS app for the ResortPass Founding iOS Engineer interview.
-> Search a place, view hotel day passes there. SwiftUI, hand-rolled MVI, Swift Concurrency.
+Two-screen iOS app for the ResortPass Founding iOS Engineer interview.
+Search a place, view hotel day passes there. SwiftUI · MVI · Swift Concurrency.
 
-<sub>iOS&nbsp;17+&nbsp;·&nbsp;Swift&nbsp;5.9&nbsp;·&nbsp;120&nbsp;unit&nbsp;tests&nbsp;·&nbsp;81&nbsp;Maestro&nbsp;flows&nbsp;·&nbsp;9&nbsp;ADRs&nbsp;·&nbsp;[CI&nbsp;wired](.github/workflows/ci.yml)</sub>
+[![CI](https://github.com/matthewharrilal/mobile-interview-test/actions/workflows/ci.yml/badge.svg?branch=feature/interview-submission)](.github/workflows/ci.yml)
+![iOS](https://img.shields.io/badge/iOS-17%2B-171717?style=flat-square)
+![Swift](https://img.shields.io/badge/Swift-5.9-171717?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-120%20passing-22c55e?style=flat-square)
+![Maestro](https://img.shields.io/badge/Maestro%20flows-81-171717?style=flat-square)
+![ADRs](https://img.shields.io/badge/ADRs-9-171717?style=flat-square)
+
+<br/>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-banner-dark.png">
+  <img src="docs/media/hero-banner-light.png" alt="Search idle · search loaded · hotel listings" width="900"/>
+</picture>
+
+<sub>Search idle · search loaded · hotel listings — both themes ship; banner switches automatically.</sub>
+
+</div>
 
 ---
+
+<sub>01 · OVERVIEW</sub>
 
 ## Setup
 
@@ -17,8 +37,6 @@ open ResortPass.xcodeproj
 
 `Cmd+R` to build and run. `Cmd+U` to run the test suite. No additional tooling needed — the `.xcodeproj` is committed alongside the `project.yml` it was generated from, so reviewers don't need XcodeGen installed.
 
-For the engineer's local convenience:
-
 ```bash
 make build    # xcodebuild for iPhone 16 Pro / iOS 18
 make test     # full unit suite (120 tests, ~20s)
@@ -27,7 +45,11 @@ make clean    # nuke DerivedData
 
 ---
 
+<sub>02 · MOTION</sub>
+
 ## Demo
+
+The static hero above is the full-state snapshot. Below: animated step-by-step capture of the workflow.
 
 <table>
 <tr>
@@ -35,45 +57,17 @@ make clean    # nuke DerivedData
 <td align="center"><img src="docs/media/hero-flow-dark.gif" alt="Hero flow — dark" width="280" /></td>
 </tr>
 <tr>
-<td align="center"><sub>Search → typing → loaded → tap → hotels</sub></td>
+<td align="center"><sub>Search → type → loaded → tap → hotels</sub></td>
 <td align="center"><sub>Same flow, dark appearance</sub></td>
 </tr>
 </table>
 
-<details>
-<summary>Still frames at each step (light + dark)</summary>
-
-<br/>
-
-<table>
-<tr>
-<td align="center" colspan="3"><sub>Light</sub></td>
-</tr>
-<tr>
-<td><img src="snapshots/01-idle.png" alt="Search idle — light" width="220" /></td>
-<td><img src="snapshots/02-loaded.png" alt="Search loaded — light" width="220" /></td>
-<td><img src="snapshots/03-hotels.png" alt="Hotel listings — light" width="220" /></td>
-</tr>
-<tr>
-<td align="center" colspan="3"><sub>Dark</sub></td>
-</tr>
-<tr>
-<td><img src="snapshots/01-idle-dark.png" alt="Search idle — dark" width="220" /></td>
-<td><img src="snapshots/02-loaded-dark.png" alt="Search loaded — dark" width="220" /></td>
-<td><img src="snapshots/03-hotels-dark.png" alt="Hotel listings — dark" width="220" /></td>
-</tr>
-<tr>
-<td align="center"><sub>idle</sub></td>
-<td align="center"><sub>loaded</sub></td>
-<td align="center"><sub>hotels</sub></td>
-</tr>
-</table>
-
-</details>
-
-<sub>GIFs are slow-motion screenshot sequences captured via Maestro (<code>.maestro/recordings/capture-sequence.yaml</code>) + <code>ffmpeg</code>. The animated morph spring and drag-throw dismiss aren't reproducible as still-frame stitches — see <a href="docs/media/README.md"><code>docs/media/README.md</code></a> for the recording infrastructure note and how to re-record locally.</sub>
+> [!NOTE]
+> GIFs are slow-motion screenshot sequences (Maestro flow + `ffmpeg` stitch). The animated morph spring and drag-throw dismiss spring aren't reproducible as still-frame stitches — see [`docs/media/README.md`](docs/media/README.md) for the recording infrastructure note and how to re-record locally. `simctl io recordVideo` is broken on Xcode 26 / iOS 26.
 
 ---
+
+<sub>03 · ESSENCE</sub>
 
 ## At a glance
 
@@ -83,20 +77,14 @@ make clean    # nuke DerivedData
 
 ---
 
-## Architecture
+<sub>04 · ARCHITECTURE</sub>
 
-```mermaid
-flowchart LR
-    V[View<br/><sub>SwiftUI</sub>] -->|reads| S[@Observable State]
-    V -->|send Intent| VM[ViewModel<br/><sub>@MainActor</sub>]
-    VM -->|mutates| S
-    VM -->|spawns Task| C[Client<br/><sub>Sendable struct</sub>]
-    C -->|executeJSON| H[HTTPClient]
-    H -->|data for:| U[URLSession]
-    U -.->|response| H
-    H -.->|decoded| C
-    C -.->|domain types| VM
-```
+## How data flows
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/architecture-dark.svg">
+  <img src="docs/media/architecture-light.svg" alt="Data flow: View ↔ State ↔ ViewModel → Client → HTTPClient.executeJSON → URLSession" width="900"/>
+</picture>
 
 The reducer is **synchronous and pure**. The only side effect is spawning a `Task` for the network call. Every async path checks `Task.checkCancellation()` at the seams. Cancellation propagates from VM → URLSession (via stored `Task<Void, Never>?` handle) and back as `CancellationError`.
 
@@ -132,7 +120,9 @@ Result: `SearchClient.live` and `HotelsClient.live` closures collapsed from ~25 
 
 ---
 
-## Features
+<sub>05 · FEATURES</sub>
+
+## What's in each surface
 
 <table>
 <tr><th align="left">Feature</th><th align="left">Key files</th><th align="left">Notable choice</th></tr>
@@ -159,21 +149,23 @@ Result: `SearchClient.live` and `HotelsClient.live` closures collapsed from ~25 
 
 ---
 
+<sub>06 · EVIDENCE</sub>
+
 ## What Maestro caught for us
 
 Maestro flow-level testing isn't decorative here. Three real bugs it surfaced that unit tests couldn't:
 
-#### F12-05 — Landscape keyboard occluded the retry CTA
+> [!NOTE]
+> **F12-05 — Landscape keyboard occluded the retry CTA.**
+> `.maestro/06-landscape.yaml` flagged that in compact-height layouts, the on-screen keyboard hid the "Try Again" button in `.failed` / `.empty` states. Fix: `.scrollDismissesKeyboard(.immediately)` on the search view + `onChange(of: state.status)` to resign first responder when entering those statuses. See [`SearchView.swift:24-36`](Sources/Features/Search/SearchView.swift#L24-L36).
 
-`.maestro/06-landscape.yaml` flagged that in compact-height layouts, the on-screen keyboard hid the "Try Again" button in `.failed` / `.empty` states. Fix: `.scrollDismissesKeyboard(.immediately)` on the search view + `onChange(of: state.status)` to resign first responder when entering those statuses. The fix and reasoning live in `SearchView.swift:24-36`.
+> [!CAUTION]
+> **iOS 26 + Maestro 2.5.1 — empty accessibility tree.**
+> `assertVisible: "Where are you headed?"` failed on iOS 26.4 but passed on iOS 18 with the same build. Investigation: Maestro 2.5.1 cannot walk the iOS 26 SwiftUI accessibility hierarchy — every body `Text` view is missing from the tree, only navigation chrome reaches the assertion layer. Visually the app renders identically on both. **Tooling pin: target iPhone 16 Pro / iOS 18 for all Maestro work** until Maestro ships iOS 26 support.
 
-#### iOS 26 + Maestro 2.5.1 — empty accessibility tree
-
-`assertVisible: "Where are you headed?"` failed on iOS 26.4 but passed on iOS 18 with the same build. Investigation: Maestro 2.5.1 cannot walk the iOS 26 SwiftUI accessibility hierarchy — every body `Text` view is missing from the tree, only navigation chrome reaches the assertion layer. Visually the app renders identically on both. **Tooling pin: target iPhone 16 Pro / iOS 18 for all Maestro work** until Maestro ships iOS 26 support.
-
-#### Null-coordinate dead-end
-
-`01-happy-path.yaml` + `05-null-coords-guard.yaml` together pinned that selecting "Brooklyn, Florida" (lat/lng `null` in the API) surfaces the dedicated `.failedNullCoords` state with a "Search a nearby city" CTA — **not** a generic "Try Again" loop that would re-pick the same offending place. The original behavior would have looked harmless in code review and would have shipped.
+> [!TIP]
+> **Null-coordinate dead-end.**
+> `01-happy-path.yaml` + `05-null-coords-guard.yaml` together pinned that selecting "Brooklyn, Florida" (lat/lng `null` in the API) surfaces the dedicated `.failedNullCoords` state with a "Search a nearby city" CTA — **not** a generic "Try Again" loop that would re-pick the same offending place. The original behavior would have looked harmless in code review and would have shipped.
 
 <details>
 <summary><b>How Maestro is wired in this project</b></summary>
@@ -196,15 +188,17 @@ maestro test .maestro/                            # the full ~80
 
 ---
 
-## Decisions
+<sub>07 · DECISIONS</sub>
 
-The architectural choices that warrant defending. Each links to its ADR.
+## What earned an ADR
+
+The architectural choices that warrant defending. Each links to its decision record.
 
 | | Decision | One-liner |
 |---|---|---|
 | [ADR-001](docs/ADRs.md) | Hand-rolled MVI, not TCA | Framework cost > value at N=2 screens |
 | [ADR-002](docs/ADRs.md) | iOS 17 deployment target | `@Observable` + `ContentUnavailableView` + `ContinuousClock` justify dropping iOS 16 |
-| [ADR-003](docs/ADRs.md) | Function-style clients, not protocols | `Sendable struct` of `@Sendable` closures — see [the steelman](docs/ADRs.md) |
+| [ADR-003](docs/ADRs.md) | Function-style clients, not protocols | `Sendable struct` of `@Sendable` closures — the steelman against protocols lives in the ADR |
 | [ADR-005](docs/ADRs.md) | Dismiss-no-refetch guard | Status-gated `.appeared` prevents skeleton flash on pop-back |
 | [ADR-006](docs/ADRs.md) | 5-minute scene-phase staleness | Balance brief-background vs hours-background refresh |
 | [ADR-007](docs/ADRs.md) | Value-bound animation, not `PhaseAnimator` | Re-instantiation during morph re-sets phase index; value-binding survives |
@@ -212,6 +206,8 @@ The architectural choices that warrant defending. Each links to its ADR.
 | [ADR-009](docs/ADRs.md) | Sectioned carousels (Screen 2 deviation) | Hospitality search is image-led |
 
 ---
+
+<sub>08 · VERIFICATION</sub>
 
 ## Testing
 
@@ -240,6 +236,8 @@ maestro:  81 flows · against the live staging API
 
 ---
 
+<sub>09 · AUTOMATION</sub>
+
 ## Continuous Integration
 
 GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml). Three jobs:
@@ -252,9 +250,12 @@ GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml
 
 Maestro screenshots and `xcresult` bundles upload as workflow artifacts on failure for inspection.
 
-> **Note on Maestro in CI.** Flows assert against real on-screen text + named screenshots — Maestro's runner fails the flow if any assertion misses or the app crashes/hangs. No separate output-comparison infra is needed; the flow IS the test. Flows hit the real staging API, so a staging outage will fail CI — acceptable trade-off, flagged in the workflow's top comment.
+> [!IMPORTANT]
+> **Maestro in CI uses Maestro's own runner-fails-on-missed-assertion model.** Flows assert against real on-screen text and named screenshot checkpoints — Maestro exits non-zero on any failed assertion or crash. No custom diff/compare harness is needed; the flow IS the test. Flows hit the real staging API, so a staging outage will fail CI — accepted trade-off, flagged in the workflow's top comment.
 
 ---
+
+<sub>10 · DATA</sub>
 
 ## API quirks worth knowing
 
@@ -268,6 +269,8 @@ The staging API has a few real-world rough edges that shaped the model layer:
 
 ---
 
+<sub>11 · DEVIATION</sub>
+
 ## Hotel listings rendering — deliberate deviation
 
 The interview prompt suggests *"vertical list (e.g., `List` or `LazyVStack` inside a `ScrollView`)"* for Screen 2. This app ships **sectioned horizontal carousels** instead. Three reasons:
@@ -279,6 +282,8 @@ The interview prompt suggests *"vertical list (e.g., `List` or `LazyVStack` insi
 Each card surfaces hotel name, image, rating, and price — the spec's *"most relevant product/price information"* — so the information surface matches even when the layout doesn't. Documented in [ADR-009](docs/ADRs.md).
 
 ---
+
+<sub>12 · LAYOUT</sub>
 
 ## Project structure
 
@@ -311,6 +316,8 @@ Tests/
 
 ---
 
+<sub>13 · APPENDIX</sub>
+
 ## UIKit drops
 
 <details>
@@ -328,8 +335,6 @@ Tests/
 | `Features/HotelDetail/HotelDetailScene.swift` | `CADisplayLink` snap-back driver | Drag-throw rubber-band interpolates at the native display refresh (120 Hz on ProMotion). |
 
 </details>
-
----
 
 ## Accessibility
 
@@ -356,8 +361,6 @@ Both flagged for an explicit audit pass.
 
 </details>
 
----
-
 ## Known limitations
 
 - **Pagination** — both endpoints accept `limit` + `offset`; the UI doesn't paginate yet. Infinite scroll on hotels would be a natural addition.
@@ -368,6 +371,8 @@ Both flagged for an explicit audit pass.
 - **App icon + launch screen** — placeholder `Contents.json` only.
 
 ---
+
+<sub>14 · FUTURE</sub>
 
 ## With more time
 
@@ -390,4 +395,6 @@ Ordered roughly by interview-lens value-per-hour:
 
 ---
 
-<sub>Architecture conventions: <a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · Major design decisions: <a href="docs/ADRs.md">docs/ADRs.md</a></sub>
+<div align="center">
+<sub><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="docs/ADRs.md">docs/ADRs.md</a> · <a href=".github/workflows/ci.yml">CI workflow</a></sub>
+</div>
