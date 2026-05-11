@@ -6,6 +6,28 @@ Two-screen iOS app for the ResortPass Founding iOS Engineer interview. Search a 
 
 ---
 
+## What this submission ships above the brief
+
+Two screens on the surface; the layers below are where the engineering lives. The highlights worth a reviewer's first 90 seconds:
+
+- **Custom presentation logic.** The detail screen morphs in from the tapped card via iOS 18's matched-transition-source + zoom navigation transition, with a hand-written iOS 17 fallback (`matchedGeometryEffect` + ZStack overlay). Dismiss is a drag-throw with a `CADisplayLink`-driven rubber-band spring at the native 120 Hz on ProMotion, and the hero header parallaxes with a damped pull-down. None of this is in the spec — it's the part that makes the app feel like a product.
+
+- **CI wired end-to-end.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) defines three GitHub Actions jobs: unit tests on every push, a Maestro smoke subset on every push, and the full 81-flow Maestro suite on a weekly schedule + manual dispatch. `xcresult` bundles and Maestro screenshots upload as artifacts on failure. [Live runs in the Actions tab](https://github.com/matthewharrilal/mobile-interview-test/actions).
+
+- **Maestro as automation, not just regression-catching.** The 81 flows in [`.maestro/`](.maestro/) work as four things at once: an **automation harness** that runs every user path on demand; a **visual auditor** for animation envelopes and state transitions (see the comprehensive-visual-audit, stretchy-hero-audit, and transitions-audit flows); a **failure-state tester** via launch-arg-injected client variants (`--ui-test-fail-search`, `--ui-test-empty-hotels`, etc.) so every error UI is reachable without disrupting the staging API; and a **bug-finder** (the F12-05 landscape-keyboard issue, the iOS 26 / Maestro 2.5.1 incompatibility, and the null-coordinate dead-end were all caught by flows running unattended).
+
+- **Design system as a dedicated module.** [`Sources/DesignSystem/Tokens/Theme.swift`](Sources/DesignSystem/Tokens/Theme.swift) is a two-tier (palette → theme) namespace covering Color, Spacing, CornerRadius, Animation, Icon, and Typography. Semantic colors resolve through Asset Catalog colorsets with light + dark appearance variants. Dynamic Type respected through `xxLarge` and into the accessibility sizes via semantic font styles. Custom Playfair Display fonts ship in the repo for editorial body type. Reusable components live in [`Sources/DesignSystem/Components/`](Sources/DesignSystem/Components/).
+
+- **Accessibility verified end-to-end.** VoiceOver labels on every interactive element. Hotel cards combine via `.accessibilityElement(children: .combine)` for single-element rotor reading. Section headers carry the `.isHeader` trait. Empty and failed states use `ContentUnavailableView` (iOS 17 native, built-in traits). All of it pinned by dedicated Maestro flows for VoiceOver navigation, AX5 layout, Reduce Motion, Bold Text, and Increase Contrast — see §11.
+
+- **Architecture that earned its decisions.** Function-style `Sendable` clients (one-line test swap, no protocol ceremony — see [ADR-003](docs/ADRs.md)) + a small `HTTPClient.executeJSON` orchestration helper that absorbs the cross-cutting transport work so each feature client stays around 10 lines. Composition root in [`AppDependencies`](Sources/App/AppDependencies.swift) with previews defaulting to fixture clients. [Nine ADRs](docs/ADRs.md) recorded for every decision worth defending.
+
+- **Defensive engineering, honest about real-world failures.** Lossy array decode by default (one malformed row drops to nil rather than breaking the whole response). The null-coordinate guard shows a dedicated failure UI for places the staging API can't locate. Deliberate spec deviation (sectioned horizontal carousels vs the spec's vertical list, owned via [ADR-009](docs/ADRs.md)). iOS 26 + Maestro 2.5.1 incompatibility documented honestly so the next person knows why everything is pinned to iOS 18.
+
+The same content in deeper detail follows below.
+
+---
+
 <sub>01 · SETUP</sub>
 
 ## Get it running
@@ -390,4 +412,4 @@ Tests/
 
 ---
 
-<sub><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="docs/ADRs.md">docs/ADRs.md</a> · <a href=".github/workflows/ci.yml">CI workflow</a> · <a href=".maestro/">Maestro flows</a> · <a href="ux-research/">UX research</a></sub>
+<sub><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> · <a href="docs/ADRs.md">docs/ADRs.md</a> · <a href=".github/workflows/ci.yml">CI workflow</a> · <a href="https://github.com/matthewharrilal/mobile-interview-test/actions">CI Actions tab</a> · <a href=".maestro/">Maestro flows</a> · <a href="ux-research/">UX research</a></sub>
