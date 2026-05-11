@@ -33,3 +33,4 @@ hotels-*.png
 
 # Multi-agent audit working files (scratch — not part of submission)
 team-audit/
+docs/media/*.mov

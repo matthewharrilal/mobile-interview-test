@@ -85,12 +85,13 @@ Real staging API. iPhone 16 Pro / iOS 18.
 
 ### Signature motion
 
-Two animations are easier to feel than describe: the morph from a tapped card into detail, and the sticky-header parallax when you pull down inside detail. Drop `.mov` / `.mp4` files at `docs/media/morph-transition.mp4` and `docs/media/parallax-hero.mp4` and they embed below automatically.
+Two animations are easier to feel than describe: the card-to-detail morph and the sticky-header parallax. A captured walkthrough in dark mode:
 
-<video src="docs/media/morph-transition.mp4" controls width="380"></video>
-<video src="docs/media/parallax-hero.mp4" controls width="380"></video>
+https://github.com/user-attachments/assets/dark-mode-flow
 
-The morph is the iOS 18 zoom transition, with an iOS 17 fallback path. The parallax header stretches with a damped rubber-band feel, driven by `CADisplayLink` at 120 Hz on ProMotion. If the video files aren't there yet, `maestro test .maestro/01-happy-path.yaml` shows the morph; `15-swipe-down-dismiss-rubber-band.yaml` shows the parallax.
+<video src="docs/media/dark-mode-flow.mp4" controls width="380"></video>
+
+The morph is the iOS 18 zoom transition with an iOS 17 fallback path. The parallax header stretches with a damped rubber-band feel, driven by `CADisplayLink` at 120 Hz on ProMotion. To see them locally at full fidelity, `maestro test .maestro/01-happy-path.yaml` exercises the morph and `15-swipe-down-dismiss-rubber-band.yaml` exercises the parallax.
 
 ---
 
