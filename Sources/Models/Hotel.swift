@@ -73,24 +73,9 @@ struct Hotel: Equatable, Sendable, Hashable, Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(Int.self, forKey: .id)
         self.name = try container.decode(String.self, forKey: .name)
-        let imgString = try container.decodeIfPresent(String.self, forKey: .desktopImg)
-        let primary = imgString.flatMap { URL(string: $0) }
+        let (primary, allImages) = try Self.decodeImageURLs(from: container)
         self.imageURL = primary
-
-        // image[] is an array of nested {picture:{url, results:{url}, details:{url}}}
-        let images = (try? container.decodeIfPresent([ImageWire].self, forKey: .image)) ?? []
-        var collected: [URL] = []
-        if let primary { collected.append(primary) }
-        for img in images {
-            // Prefer details URL (largest), fall back to results, then base url
-            let candidates = [img.picture?.details?.url, img.picture?.results?.url, img.picture?.url]
-                .compactMap { $0 }
-            if let urlString = candidates.first, let url = URL(string: urlString), !collected.contains(url) {
-                collected.append(url)
-            }
-        }
-        self.imageURLs = collected
-
+        self.imageURLs = allImages
         self.rating = try container.decodeIfPresent(Double.self, forKey: .rating)
         self.reviewCount = (try? container.decode(Int.self, forKey: .reviews)) ?? 0
         self.hotelStar = try? container.decodeIfPresent(Int.self, forKey: .hotelStar)
@@ -99,10 +84,53 @@ struct Hotel: Equatable, Sendable, Hashable, Identifiable, Codable {
         self.cityName = try? container.decodeIfPresent(String.self, forKey: .cityName)
         self.stateCode = try? container.decodeIfPresent(String.self, forKey: .stateCode)
         self.productName = try container.decodeIfPresent(String.self, forKey: .productName)
+        self.primaryVibe = Self.decodePrimaryVibe(from: container)
+        self.cheapestPrice = Self.decodeCheapestPrice(from: container)
+    }
+
+    /// Pulls the primary image plus the deduplicated, ordered image list.
+    /// `desktopImg` (a single string) is the primary; `image` is an array
+    /// of nested `{picture:{url, results:{url}, details:{url}}}` records
+    /// where the largest available URL per record is appended in order.
+    private static func decodeImageURLs(
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) throws -> (primary: URL?, all: [URL]) {
+        let imgString = try container.decodeIfPresent(String.self, forKey: .desktopImg)
+        let primary = imgString.flatMap { URL(string: $0) }
+        var collected: [URL] = []
+        if let primary { collected.append(primary) }
+        let images = (try? container.decodeIfPresent([ImageWire].self, forKey: .image)) ?? []
+        for img in images {
+            // Prefer details URL (largest), fall back to results, then base url
+            let candidates = [img.picture?.details?.url, img.picture?.results?.url, img.picture?.url]
+                .compactMap { $0 }
+            if let urlString = candidates.first,
+               let url = URL(string: urlString),
+               !collected.contains(url) {
+                collected.append(url)
+            }
+        }
+        return (primary, collected)
+    }
+
+    /// Reads `vibes.primary` defensively. `try?` everywhere so a missing
+    /// container, null primary, or type-mismatched value all drop to nil
+    /// without failing the whole hotel decode.
+    private static func decodePrimaryVibe(
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) -> String? {
         let vibesContainer = try? container.nestedContainer(keyedBy: VibesKeys.self, forKey: .vibes)
-        self.primaryVibe = try? vibesContainer?.decodeIfPresent(String.self, forKey: .primary)
+        return (try? vibesContainer?.decodeIfPresent(String.self, forKey: .primary)) ?? nil
+    }
+
+    /// Picks the minimum `price` across `products[]`. `try?` on the
+    /// products decode so an object-shaped value (schema drift) yields
+    /// nil instead of failing the hotel.
+    private static func decodeCheapestPrice(
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) -> Double? {
         let products = try? container.decodeIfPresent([Product].self, forKey: .products)
-        self.cheapestPrice = products?.compactMap(\.price).min()
+        return products?.compactMap(\.price).min()
     }
 
     /// Mirrors `init(from:)` so encode→decode round-trips preserve every field.
