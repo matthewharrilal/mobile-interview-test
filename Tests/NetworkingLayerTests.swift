@@ -15,7 +15,7 @@ final class NetworkingLayerTests: XCTestCase {
         //   https://staging-app.resortpass.com/api/search/places/autocomplete?terms={terms}&limit=10&offset=0
         // We pin this exactly so a future contributor can't silently break
         // URL encoding, drop a query param, or change the page size.
-        let url = Endpoints.placesAutocomplete(terms: "newport", environment: .staging)
+        let url = Endpoints.placesAutocomplete(matching: "newport", environment: .staging)
         XCTAssertEqual(
             url.absoluteString,
             "https://staging-app.resortpass.com/api/search/places/autocomplete?terms=newport&limit=10&offset=0"
@@ -26,7 +26,7 @@ final class NetworkingLayerTests: XCTestCase {
         // "Newport Beach" → "Newport%20Beach"; quotes, ampersands, slashes
         // must all be percent-encoded so they don't break query parsing
         // server-side.
-        let url = Endpoints.placesAutocomplete(terms: "Newport Beach", environment: .staging)
+        let url = Endpoints.placesAutocomplete(matching: "Newport Beach", environment: .staging)
         XCTAssertEqual(
             url.absoluteString,
             "https://staging-app.resortpass.com/api/search/places/autocomplete?terms=Newport%20Beach&limit=10&offset=0"
@@ -36,7 +36,7 @@ final class NetworkingLayerTests: XCTestCase {
     func test_placesAutocompleteURL_acceptsNonLatinTerms() {
         // CJK input must round-trip; the staging API accepts UTF-8
         // percent-encoded queries.
-        let url = Endpoints.placesAutocomplete(terms: "東京", environment: .staging)
+        let url = Endpoints.placesAutocomplete(matching: "東京", environment: .staging)
         let absolute = url.absoluteString
         XCTAssertTrue(absolute.hasPrefix("https://staging-app.resortpass.com/api/search/places/autocomplete?terms="))
         // %E6%9D%B1%E4%BA%AC is UTF-8 for "東京"

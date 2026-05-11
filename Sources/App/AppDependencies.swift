@@ -29,21 +29,19 @@ import SwiftUI
 struct AppDependencies: Sendable {
     var search: SearchClient
     var hotels: HotelsClient
-    var http: HTTPClient
     var logger: LogClient
 
     // MARK: - Factories
 
     /// Production wiring. Composes the live graph: shared logger →
-    /// shared HTTP transport → per-endpoint clients. Reused by
-    /// `ResortPassApp.init`.
+    /// shared HTTP transport (private to the closure since no consumer
+    /// reads `dependencies.http` directly) → per-endpoint clients.
     static func live(environment: APIEnvironment = .staging) -> AppDependencies {
         let logger = LogClient.live
         let http = HTTPClient.live()
         return AppDependencies(
             search: .live(environment: environment, http: http, logger: logger),
             hotels: .live(environment: environment, http: http, logger: logger),
-            http: http,
             logger: logger
         )
     }
@@ -56,7 +54,6 @@ struct AppDependencies: Sendable {
         AppDependencies(
             search: .preview,
             hotels: .preview,
-            http: .live(),
             logger: .silent
         )
     }

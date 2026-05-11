@@ -1,5 +1,5 @@
 // Decoders.swift
-// Single configured JSONDecoder for every networking call.
+// Configured JSONDecoder + JSONEncoder used for every networking call.
 // Uses .useDefaultKeys (NOT .convertFromSnakeCase) so wire-level fields like
 // objectID, queryID, indexName decode cleanly via explicit CodingKeys per type.
 
@@ -11,5 +11,15 @@ enum Decoders {
         d.keyDecodingStrategy = .useDefaultKeys
         d.dateDecodingStrategy = .iso8601
         return d
+    }()
+}
+
+enum Encoders {
+    /// Mirrors `Decoders.api` so encode→decode round-trips share strategy.
+    static let api: JSONEncoder = {
+        let e = JSONEncoder()
+        e.keyEncodingStrategy = .useDefaultKeys
+        e.dateEncodingStrategy = .iso8601
+        return e
     }()
 }

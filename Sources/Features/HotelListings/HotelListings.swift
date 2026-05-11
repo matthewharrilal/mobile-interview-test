@@ -264,18 +264,9 @@ final class HotelListingsViewModel {
             }
         case .cardTapped(let hotel, let sourceID):
             state.presentation = .detailExpanded(hotel: hotel, sourceID: sourceID)
-            // Window B: warm the next 4 carousel images so the detail's
-            // swipeable carousel doesn't placeholder-flicker on first swipe.
-            // Processor MUST match the call-site processor in
-            // HotelImageCarousel.swift (default-init EditorialGradeProcessor)
-            // so the prefetched cache key matches the on-screen lookup.
-            let nextImageURLs = Array(hotel.imageURLs.dropFirst().prefix(4))
-            if !nextImageURLs.isEmpty {
-                ImagePrefetcher(
-                    urls: nextImageURLs,
-                    options: [.processor(EditorialGradeProcessor())]
-                ).start()
-            }
+            // Window B: warm next-image cache so the detail's swipeable
+            // carousel doesn't placeholder-flicker on first swipe.
+            warmImageCache(for: .detailCarousel(hotel: hotel))
         case .detailDismissed:
             state.presentation = .browsing
             state.dismissProgress = 0
@@ -312,37 +303,45 @@ final class HotelListingsViewModel {
                         activeFilter: .all,
                         fetchedAt: self.currentDate()
                     ))
-                    // Window A: warm cold cache for the first 30 hotel cards
-                    // so the morph hot path doesn't decode on demand.
-                    // Processor MUST match the call-site processor in
-                    // CachedAsyncImage.swift / HotelImageCarousel.swift
-                    // (default-init EditorialGradeProcessor) so the
-                    // prefetched cache key matches the on-screen lookup.
-                    let urls = response.hotels.prefix(30).compactMap(\.imageURL)
-                    if !urls.isEmpty {
-                        ImagePrefetcher(
-                            urls: urls,
-                            options: [.processor(EditorialGradeProcessor())]
-                        ).start()
-                    }
+                    self.warmImageCache(for: .listingsGrid(hotels: response.hotels))
                 }
-            } catch is CancellationError {
-                // silent
-            } catch let urlError as URLError where urlError.code == .cancelled {
-                // silent
             } catch {
-                self.state.status = .failed(message: Self.message(for: ErrorKind.from(error)))
+                let translated = error.translatingCancellation()
+                if translated is CancellationError { return }   // silent
+                self.state.status = .failed(
+                    message: Strings.Hotels.errorMessages.message(for: ErrorKind.from(translated))
+                )
             }
         }
     }
 
-    private static func message(for kind: ErrorKind) -> String {
-        switch kind {
-        case .notConnected: return Strings.Hotels.failedNetwork
-        case .timeout:      return Strings.Hotels.failedTimeout
-        case .serverError:  return Strings.Hotels.failedServer
-        case .decodeError:  return Strings.Hotels.failedDecode
-        case .unknown:      return Strings.Hotels.failedUnknown
+    // MARK: - Image cache warming
+
+    /// Two distinct cache-warming windows the listings VM owns. Kept here
+    /// (rather than in the View) because the trigger is a state transition
+    /// the VM is already authoring — `.loaded` → warm the grid, `.cardTapped`
+    /// → warm the next 4 carousel images for the picked hotel.
+    /// Processor MUST match the call-site processor used by
+    /// `CachedAsyncImage` / `HotelImageCarousel` (default-init
+    /// `EditorialGradeProcessor`) so the prefetched cache key matches the
+    /// on-screen lookup.
+    enum CacheWindow {
+        case listingsGrid(hotels: [Hotel])
+        case detailCarousel(hotel: Hotel)
+    }
+
+    private func warmImageCache(for window: CacheWindow) {
+        let urls: [URL]
+        switch window {
+        case .listingsGrid(let hotels):
+            urls = hotels.prefix(30).compactMap(\.imageURL)
+        case .detailCarousel(let hotel):
+            urls = Array(hotel.imageURLs.dropFirst().prefix(4))
         }
+        guard !urls.isEmpty else { return }
+        ImagePrefetcher(
+            urls: urls,
+            options: [.processor(EditorialGradeProcessor())]
+        ).start()
     }
 }

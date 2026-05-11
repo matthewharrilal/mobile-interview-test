@@ -92,13 +92,10 @@ struct ResortPassApp: App {
 
     @ViewBuilder
     private var rootContent: some View {
-        RootNavigationView(
-            searchViewModel: searchViewModel,
-            hotelsClient: dependencies.hotels
-        )
-        .environment(\.dependencies, dependencies)
-        .environment(\.statusBarStyleAnimator, statusBarAnimator)
-        .environment(\.morphTransitionAdapter, morphTransitionAdapter)
+        RootNavigationView(searchViewModel: searchViewModel)
+            .environment(\.dependencies, dependencies)
+            .environment(\.statusBarStyleAnimator, statusBarAnimator)
+            .environment(\.morphTransitionAdapter, morphTransitionAdapter)
     }
 }
 
@@ -112,9 +109,13 @@ struct ResortPassApp: App {
 ///
 /// On iOS 17 the namespace is unused — the listings view falls back to its
 /// internal matchedGeometryEffect + ZStack overlay path.
+///
+/// Reads `HotelsClient` from `@Environment(\.dependencies)` rather than
+/// taking it as an explicit init param — same source of truth as the rest
+/// of the dependency graph.
 private struct RootNavigationView: View {
     let searchViewModel: SearchViewModel
-    let hotelsClient: HotelsClient
+    @Environment(\.dependencies) private var dependencies
 
     @Namespace private var zoomNamespace
 
@@ -131,7 +132,7 @@ private struct RootNavigationView: View {
                     case .hotelListings(let place):
                         HotelListingsView(
                             place: place,
-                            client: hotelsClient,
+                            client: dependencies.hotels,
                             zoomNamespace: zoomNamespace,
                             pushDetail: { hotel, sourceID, currency in
                                 searchViewModel.send(.pathChanged(

@@ -1,5 +1,9 @@
 // HotelsClient.swift
 // Function-style client for the algolia_hotels_v7 endpoint.
+//
+// Transport / logging / cancellation translation are owned by
+// `HTTPClient.executeJSON(...)` — this file owns only request construction
+// (URL + typed body) and the wire→domain mapping.
 
 import Foundation
 
@@ -13,54 +17,101 @@ struct HotelsSearchResponse: Sendable {
     let total: Int
 }
 
+// MARK: - Wire types
+
+/// Typed request body for `/api/search/algolia_hotels_v7`. Replaces the
+/// previous `[String: Any]` + JSONSerialization construction so the body
+/// schema is checked at compile time and the verbatim spec test can
+/// exercise the actual client request.
+private struct AlgoliaHotelsRequest: Encodable {
+    struct Location: Encodable {
+        let latitude: Double
+        let longitude: Double
+    }
+    let location: Location
+    let limit: Int
+    let offset: Int
+}
+
+/// Wire response shape. Decoded once, then mapped to `HotelsSearchResponse`
+/// via `toDomain()` to keep transport and domain mapping as separate
+/// concerns in the `.live` factory.
+private struct HotelsWireResponse: Decodable {
+    let hotels: [Hotel]
+    let currency: CurrencyWire?
+    let total: Int?
+
+    struct CurrencyWire: Decodable {
+        let symbol: String?
+        let isoCode: String?
+
+        enum CodingKeys: String, CodingKey {
+            case symbol
+            case isoCode = "iso_code"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case hotels, currency, total
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.hotels = try container.decodeLossyArray([Hotel].self, forKey: .hotels)
+        self.currency = try container.decodeIfPresent(CurrencyWire.self, forKey: .currency)
+        self.total = try container.decodeIfPresent(Int.self, forKey: .total)
+    }
+
+    func toDomain() -> HotelsSearchResponse {
+        HotelsSearchResponse(
+            hotels: hotels,
+            currency: Currency(
+                code: currency?.isoCode ?? Currency.usd.code,
+                symbol: currency?.symbol ?? Currency.usd.symbol
+            ),
+            total: total ?? hotels.count
+        )
+    }
+}
+
 // MARK: - Live
 
 extension HotelsClient {
     static func live(
         environment: APIEnvironment = .staging,
         http: HTTPClient = .live(),
-        decoder: JSONDecoder = Decoders.api,
         logger: LogClient = .live
     ) -> HotelsClient {
         HotelsClient { location in
-            logger.debug("hotels.initiated", ["location": location.name])
-            let url = Endpoints.algoliaHotels(environment: environment)
-            var request = URLRequest(url: url, timeoutInterval: Networking.Constants.requestTimeout)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let body: [String: Any] = [
-                "location": [
-                    "latitude": location.latitude ?? 0,
-                    "longitude": location.longitude ?? 0
-                ],
-                "limit": Networking.Constants.hotelsPageSize,
-                "offset": 0
-            ]
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-
-            do {
-                let (data, _) = try await http.send(request)
-                try Task.checkCancellation()
-                let wire = try decoder.decode(HotelsWireResponse.self, from: data)
-                let response = HotelsSearchResponse(
-                    hotels: wire.hotels,
-                    currency: Currency(
-                        code: wire.currency?.iso_code ?? "USD",
-                        symbol: wire.currency?.symbol ?? "$"
-                    ),
-                    total: wire.total ?? wire.hotels.count
-                )
-                logger.info("hotels.completed", ["count": "\(response.hotels.count)"])
-                return response
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch let urlError as URLError where urlError.code == .cancelled {
-                throw CancellationError()
-            } catch {
-                logger.error("hotels.failed", ["error": "\(error)"])
-                throw error
+            // Contract: callers must check `place.hasUsableCoordinates`
+            // before invoking — the autocomplete VM does this guard before
+            // navigation. If the guard is ever weakened this precondition
+            // surfaces the contract violation immediately rather than
+            // silently querying (0, 0).
+            guard let latitude = location.latitude, let longitude = location.longitude else {
+                preconditionFailure("HotelsClient.search requires usable coordinates; got nil for \(location.name)")
             }
+            let body = AlgoliaHotelsRequest(
+                location: .init(latitude: latitude, longitude: longitude),
+                limit: Networking.Constants.hotelsPageSize,
+                offset: 0
+            )
+            var request = URLRequest(
+                url: Endpoints.algoliaHotels(environment: environment),
+                timeoutInterval: Networking.Constants.requestTimeout
+            )
+            request.setMethod(.post)
+            request.setContentType(.json)
+            request.httpBody = try Encoders.api.encode(body)
+
+            let wire = try await http.executeJSON(
+                request,
+                as: HotelsWireResponse.self,
+                event: (.hotelsInitiated, .hotelsCompleted, .hotelsFailed),
+                payload: ["location": location.name],
+                logger: logger
+            )
+            return wire.toDomain()
         }
     }
 }
@@ -77,7 +128,7 @@ extension HotelsClient {
     static var failingThenRecovers: HotelsClient {
         let counter = CallCounter()
         return HotelsClient { _ in
-            if counter.incrementAndGet() == 1 {
+            if await counter.incrementAndGet() == 1 {
                 throw NetworkingError.invalidResponse
             }
             return HotelsSearchResponse(
@@ -99,55 +150,4 @@ extension HotelsClient {
             total: Hotel.previewFixtures.count
         )
     }
-}
-
-// MARK: - Wire response
-
-private struct HotelsWireResponse: Decodable {
-    let hotels: [Hotel]
-    let currency: CurrencyWire?
-    let total: Int?
-
-    struct CurrencyWire: Decodable {
-        let symbol: String?
-        let iso_code: String?
-    }
-
-    /// Custom decode so a single malformed hotel row doesn't drop the
-    /// whole listings response. Wraps each element in
-    /// `FailableDecodable<Hotel>` and `compactMap`s survivors.
-    enum CodingKeys: String, CodingKey {
-        case hotels, currency, total
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let wrapped = try container.decodeIfPresent([FailableDecodable<Hotel>].self, forKey: .hotels) ?? []
-        self.hotels = wrapped.compactMap(\.value)
-        self.currency = try container.decodeIfPresent(CurrencyWire.self, forKey: .currency)
-        self.total = try container.decodeIfPresent(Int.self, forKey: .total)
-    }
-}
-
-extension Hotel {
-    static let previewFixtures: [Hotel] = [
-        Hotel(
-            id: 1, name: "TWA Hotel",
-            imageURL: URL(string: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"),
-            rating: 4.1, reviewCount: 164, distanceMiles: 8, distanceText: "8 mi",
-            productName: "Pool Pass 9pm-10:45pm", primaryVibe: "Trendy", cheapestPrice: 50
-        ),
-        Hotel(
-            id: 2, name: "Hyatt Regency JFK",
-            imageURL: URL(string: "https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800"),
-            rating: 4.3, reviewCount: 89, distanceMiles: 3, distanceText: "3 mi",
-            productName: "Day Pass 10am-6pm", primaryVibe: "Modern", cheapestPrice: 75
-        ),
-        Hotel(
-            id: 3, name: "The Ritz-Carlton, Half Moon Bay",
-            imageURL: URL(string: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800"),
-            rating: 4.8, reviewCount: 421, distanceMiles: 5, distanceText: "5 mi",
-            productName: "Pool & Spa Day Pass", primaryVibe: "Luxury", cheapestPrice: 195
-        )
-    ]
 }

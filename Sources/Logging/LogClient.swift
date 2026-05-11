@@ -8,7 +8,6 @@ import OSLog
 struct LogClient: Sendable {
     var debug: @Sendable (_ event: String, _ payload: [String: String]) -> Void
     var info: @Sendable (_ event: String, _ payload: [String: String]) -> Void
-    var warn: @Sendable (_ event: String, _ payload: [String: String]) -> Void
     var error: @Sendable (_ event: String, _ payload: [String: String]) -> Void
 }
 
@@ -19,7 +18,6 @@ extension LogClient {
         return LogClient(
             debug: { event, payload in logger.debug("\(event, privacy: .public) \(payload, privacy: .public)") },
             info:  { event, payload in logger.info("\(event, privacy: .public) \(payload, privacy: .public)") },
-            warn:  { event, payload in logger.warning("\(event, privacy: .public) \(payload, privacy: .public)") },
             error: { event, payload in logger.error("\(event, privacy: .public) \(payload, privacy: .public)") }
         )
     }()
@@ -28,7 +26,6 @@ extension LogClient {
     static let silent = LogClient(
         debug: { _, _ in },
         info:  { _, _ in },
-        warn:  { _, _ in },
         error: { _, _ in }
     )
 }

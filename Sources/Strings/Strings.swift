@@ -26,6 +26,14 @@ enum Strings {
         static let nullCoordsHeadline = String(localized: "search.failed.nullCoords.headline", defaultValue: "Coordinates unavailable")
         static let nullCoordsCTA = String(localized: "search.failed.nullCoords.cta", defaultValue: "Search a nearby city")
         static let tryAgain = String(localized: "common.tryAgain", defaultValue: "Try Again")
+
+        static let errorMessages = ErrorMessages(
+            notConnected: failedNetwork,
+            timeout: failedTimeout,
+            serverError: failedServer,
+            decodeError: failedDecode,
+            unknown: failedUnknown
+        )
     }
 
     // MARK: - Hotel listings screen
@@ -40,6 +48,14 @@ enum Strings {
         static let failedServer = String(localized: "hotels.failed.server", defaultValue: "Our servers are having trouble. Please try again shortly.")
         static let failedDecode = String(localized: "hotels.failed.decode", defaultValue: "We received an unexpected response. Please try again.")
         static let failedUnknown = String(localized: "hotels.failed.unknown", defaultValue: "Something went wrong. Check your connection and try again.")
+
+        static let errorMessages = ErrorMessages(
+            notConnected: failedNetwork,
+            timeout: failedTimeout,
+            serverError: failedServer,
+            decodeError: failedDecode,
+            unknown: failedUnknown
+        )
     }
 
     // MARK: - Accessibility

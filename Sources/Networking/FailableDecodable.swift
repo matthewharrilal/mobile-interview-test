@@ -10,17 +10,13 @@
 // tradeoff — the user pays for one bad data row by seeing zero results.
 //
 // `FailableDecodable<T>` decodes individually and surfaces malformed rows
-// as `nil`. The caller uses `compactMap(\.value)` to filter survivors.
-//
-// Trade-off: silent drop. The lost row is invisible to the user and to
-// debugging — instrumenting via the injected logger is a future
-// improvement (see audit-C §Data Modeling gap #1 in the
-// INTERVIEW-COMPLIANCE-AUDIT.md).
+// as `nil`. The caller uses `compactMap(\.value)` (or the `.compactValues`
+// extension below) to filter survivors.
 
 import Foundation
 
 /// Decodes `Wrapped` but turns any decode failure into `nil` on `value`.
-/// Pair with `[FailableDecodable<T>]` + `.compactMap(\.value)` to lossily
+/// Pair with `[FailableDecodable<T>]` + `.compactValues` to lossily
 /// decode an array of `T`.
 struct FailableDecodable<Wrapped: Decodable>: Decodable {
     let value: Wrapped?
@@ -34,6 +30,14 @@ struct FailableDecodable<Wrapped: Decodable>: Decodable {
     }
 }
 
+extension Array {
+    /// Convenience for arrays of `FailableDecodable<T>` — returns the
+    /// non-nil `.value`s in order.
+    func compactValues<T>() -> [T] where Element == FailableDecodable<T> {
+        compactMap(\.value)
+    }
+}
+
 extension JSONDecoder {
     /// Decodes `[T]` from `data` and silently drops any element whose
     /// per-element decode threw. Returns only the elements that succeeded.
@@ -42,7 +46,19 @@ extension JSONDecoder {
     /// records (autocomplete results, hotel listings) and partial
     /// availability is preferable to total failure.
     func decodeLossy<T: Decodable>(_ type: [T].Type, from data: Data) throws -> [T] {
-        let wrappers = try decode([FailableDecodable<T>].self, from: data)
-        return wrappers.compactMap(\.value)
+        try decode([FailableDecodable<T>].self, from: data).compactValues()
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// Lossy variant for nested arrays — decodes `[T]` for `key` and drops
+    /// any element whose per-element decode threw. Returns `[]` when the
+    /// key is absent.
+    ///
+    /// Mirrors `JSONDecoder.decodeLossy` for the case where the array
+    /// lives inside a wire object (`{ "hotels": [...] }`) instead of at
+    /// the top level.
+    func decodeLossyArray<T: Decodable>(_ type: [T].Type, forKey key: Key) throws -> [T] {
+        try decodeIfPresent([FailableDecodable<T>].self, forKey: key)?.compactValues() ?? []
     }
 }

@@ -28,6 +28,8 @@ enum ErrorKind: Sendable, Equatable {
                 return (500...599).contains(code) ? .serverError : .unknown
             case .invalidResponse:
                 return .unknown
+            case .decode:
+                return .decodeError
             }
         }
         if let urlError = error as? URLError {
@@ -42,5 +44,38 @@ enum ErrorKind: Sendable, Equatable {
             }
         }
         return .unknown
+    }
+
+    /// Whether retrying the same request is likely to recover. Transient
+    /// network conditions and 5xx are retryable; decode errors and unknown
+    /// failures are not (retry would hit the same path).
+    var isRetryable: Bool {
+        switch self {
+        case .notConnected, .timeout, .serverError: return true
+        case .decodeError, .unknown:                return false
+        }
+    }
+}
+
+// MARK: - User-facing copy mapping
+
+/// Bundles the five user-facing strings a feature needs for each
+/// `ErrorKind`. Replaces the duplicated 5-arm switch that previously
+/// lived as a private static `message(for:)` in each ViewModel.
+struct ErrorMessages: Sendable {
+    let notConnected: String
+    let timeout: String
+    let serverError: String
+    let decodeError: String
+    let unknown: String
+
+    func message(for kind: ErrorKind) -> String {
+        switch kind {
+        case .notConnected: return notConnected
+        case .timeout:      return timeout
+        case .serverError:  return serverError
+        case .decodeError:  return decodeError
+        case .unknown:      return unknown
+        }
     }
 }

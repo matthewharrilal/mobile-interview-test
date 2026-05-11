@@ -120,16 +120,6 @@ final class SearchViewModel {
         }
     }
 
-    private static func message(for kind: ErrorKind) -> String {
-        switch kind {
-        case .notConnected: return Strings.Search.failedNetwork
-        case .timeout:      return Strings.Search.failedTimeout
-        case .serverError:  return Strings.Search.failedServer
-        case .decodeError:  return Strings.Search.failedDecode
-        case .unknown:      return Strings.Search.failedUnknown
-        }
-    }
-
     private func startSearch(query: String) {
         fetchTask?.cancel()
         state.status = .loading
@@ -146,12 +136,12 @@ final class SearchViewModel {
                 } else {
                     self.state.status = .loaded(places)
                 }
-            } catch is CancellationError {
-                // silent: superseded by a newer query
-            } catch let urlError as URLError where urlError.code == .cancelled {
-                // silent: cancellation propagated through URLSession
             } catch {
-                self.state.status = .failed(message: Self.message(for: ErrorKind.from(error)))
+                let translated = error.translatingCancellation()
+                if translated is CancellationError { return }   // silent: superseded by newer query
+                self.state.status = .failed(
+                    message: Strings.Search.errorMessages.message(for: ErrorKind.from(translated))
+                )
             }
         }
     }
