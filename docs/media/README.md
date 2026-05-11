@@ -1,18 +1,42 @@
 # Recorded demos
 
-This directory is reserved for slow-motion animated GIFs of the signature interactions:
+| File | What it shows | How |
+|---|---|---|
+| `hero-flow.gif` | Search → type "newport" → loaded → tap → hotels | 7-frame Maestro screenshot sequence, light appearance, stitched at 1.25 fps with `ffmpeg` |
+| `hero-flow-dark.gif` | Same flow in dark appearance | Same approach with `xcrun simctl ui booted appearance dark` set beforehand |
 
-- `hero-morph.gif` — search → tap card → morph to detail
-- `drag-throw-dismiss.gif` — pull-down rubber-band → snap back
-- `dark-mode-hotels.gif` — appearance transition
+## Re-recording locally
 
-## Why these aren't here yet
+Each GIF is regenerated from a Maestro flow + `ffmpeg` stitch. From the repo root:
 
-`xcrun simctl io booted recordVideo` returns `SimRenderServer.SimulatorError code=2` against this Xcode 26 / iOS 26 toolchain, even with the iOS 18 simulator booted and the Simulator app in the foreground. This is a known regression in the new sim render pipeline.
+```bash
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
 
-Workarounds for a follow-up pass:
+# Light variant
+xcrun simctl ui booted appearance light
+maestro test .maestro/recordings/capture-sequence.yaml
+ffmpeg -y -framerate 1.25 -pattern_type glob -i 'seq-*.png' \
+  -vf "fps=10,scale=320:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5" \
+  -loop 0 docs/media/hero-flow.gif
+rm seq-*.png
+
+# Dark variant
+xcrun simctl ui booted appearance dark
+maestro test .maestro/recordings/capture-sequence.yaml
+ffmpeg ...                                       # same command, different output filename
+xcrun simctl ui booted appearance light
+```
+
+## What's not here yet
+
+- **`morph-spring.gif`** — the matched-transition zoom from card → detail. Capturing this faithfully needs frame-by-frame video, not screenshot stitches.
+- **`drag-throw-dismiss.gif`** — same problem: the rubber-band + snap-back spring runs at 120 Hz on ProMotion; stills can't represent it.
+
+`xcrun simctl io booted recordVideo` returns `SimRenderServer.SimulatorError code=2` on this Xcode 26 / iOS 26 toolchain (known regression in the new sim render pipeline). Workarounds for a follow-up pass:
+
 1. **QuickTime Player → File → New Screen Recording**, manual region select over the Simulator window. Reliable; not scriptable.
-2. **`screencapture -V <seconds> -t mov`** — requires Screen Recording permission for the parent terminal/IDE, which isn't granted on this machine.
-3. **Maestro `takeScreenshot:` series at tight intervals + `ffmpeg`** to stitch into a GIF. Approximates animation at ~5–10 fps; legible for state transitions but not for the morph spring.
+2. **macOS `screencapture`** — the `-V` video flag exists in newer macOS releases but isn't in 26.x.
+3. **`ffmpeg -f avfoundation -i "1"`** — works if the parent terminal has Screen Recording permission granted; this machine doesn't have that set up.
 
-For now, the static light/dark gallery in [`/snapshots/`](../../snapshots/) and the Maestro flows themselves (run locally for the full motion) carry the visual story.
+Run the Maestro flows themselves (`maestro test .maestro/`) on a local sim for the full motion.

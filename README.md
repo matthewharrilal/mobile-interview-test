@@ -31,29 +31,47 @@ make clean    # nuke DerivedData
 
 <table>
 <tr>
-<td align="center" colspan="3"><sub>Light theme</sub></td>
+<td align="center"><img src="docs/media/hero-flow.gif" alt="Hero flow — light" width="280" /></td>
+<td align="center"><img src="docs/media/hero-flow-dark.gif" alt="Hero flow — dark" width="280" /></td>
 </tr>
 <tr>
-<td><img src="snapshots/01-idle.png" alt="Search idle — light" width="240" /></td>
-<td><img src="snapshots/02-loaded.png" alt="Search loaded — light" width="240" /></td>
-<td><img src="snapshots/03-hotels.png" alt="Hotel listings — light" width="240" /></td>
-</tr>
-<tr>
-<td align="center" colspan="3"><sub>Dark theme</sub></td>
-</tr>
-<tr>
-<td><img src="snapshots/01-idle-dark.png" alt="Search idle — dark" width="240" /></td>
-<td><img src="snapshots/02-loaded-dark.png" alt="Search loaded — dark" width="240" /></td>
-<td><img src="snapshots/03-hotels-dark.png" alt="Hotel listings — dark" width="240" /></td>
-</tr>
-<tr>
-<td align="center"><sub>Search — idle</sub></td>
-<td align="center"><sub>Search — loaded</sub></td>
-<td align="center"><sub>Hotel listings</sub></td>
+<td align="center"><sub>Search → typing → loaded → tap → hotels</sub></td>
+<td align="center"><sub>Same flow, dark appearance</sub></td>
 </tr>
 </table>
 
-Animated captures of signature interactions live in [`docs/media/`](docs/media/) — hero morph (card → detail), drag-throw dismiss, dark-mode transition.
+<details>
+<summary>Still frames at each step (light + dark)</summary>
+
+<br/>
+
+<table>
+<tr>
+<td align="center" colspan="3"><sub>Light</sub></td>
+</tr>
+<tr>
+<td><img src="snapshots/01-idle.png" alt="Search idle — light" width="220" /></td>
+<td><img src="snapshots/02-loaded.png" alt="Search loaded — light" width="220" /></td>
+<td><img src="snapshots/03-hotels.png" alt="Hotel listings — light" width="220" /></td>
+</tr>
+<tr>
+<td align="center" colspan="3"><sub>Dark</sub></td>
+</tr>
+<tr>
+<td><img src="snapshots/01-idle-dark.png" alt="Search idle — dark" width="220" /></td>
+<td><img src="snapshots/02-loaded-dark.png" alt="Search loaded — dark" width="220" /></td>
+<td><img src="snapshots/03-hotels-dark.png" alt="Hotel listings — dark" width="220" /></td>
+</tr>
+<tr>
+<td align="center"><sub>idle</sub></td>
+<td align="center"><sub>loaded</sub></td>
+<td align="center"><sub>hotels</sub></td>
+</tr>
+</table>
+
+</details>
+
+<sub>GIFs are slow-motion screenshot sequences captured via Maestro (<code>.maestro/recordings/capture-sequence.yaml</code>) + <code>ffmpeg</code>. The animated morph spring and drag-throw dismiss aren't reproducible as still-frame stitches — see <a href="docs/media/README.md"><code>docs/media/README.md</code></a> for the recording infrastructure note and how to re-record locally.</sub>
 
 ---
 

@@ -1,0 +1,37 @@
+appId: com.resortpass.interview.ResortPass
+name: Frame sequence for hero GIF
+tags:
+  - recording
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Day Passes"
+- takeScreenshot: seq-01-idle
+
+- tapOn: "Search cities, hotels…"
+- inputText: "n"
+- takeScreenshot: seq-02-typing-n
+
+- inputText: "e"
+- takeScreenshot: seq-03-typing-ne
+
+- inputText: "w"
+- takeScreenshot: seq-04-typing-new
+
+- inputText: "port"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000
+- takeScreenshot: seq-05-loaded
+
+- tapOn: "Newport Beach, California"
+- waitForAnimationToEnd:
+    timeout: 1000
+- takeScreenshot: seq-06-transition
+
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 8000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: seq-07-hotels
