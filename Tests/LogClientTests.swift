@@ -17,59 +17,62 @@ final class LogClientTests: XCTestCase {
     }
 
     func test_customFactory_capturesEventNameAndPayload() {
-        actor Recorder {
-            var events: [(severity: String, name: String, payload: [String: String])] = []
-            func record(_ severity: String, _ name: String, _ payload: [String: String]) {
-                events.append((severity, name, payload))
-            }
-        }
-        let recorder = Recorder()
+        // Lock-backed recorder so the three log calls below append in
+        // their invocation order regardless of how the closures are
+        // dispatched. (Earlier version used `Task { ... }` inside the
+        // closures and was order-flaky.)
+        let recorder = SyncRecorder()
         let log = LogClient(
-            debug: { name, payload in Task { await recorder.record("debug", name, payload) } },
-            info:  { name, payload in Task { await recorder.record("info",  name, payload) } },
-            error: { name, payload in Task { await recorder.record("error", name, payload) } }
+            debug: { name, payload in recorder.record("debug", name, payload) },
+            info:  { name, payload in recorder.record("info",  name, payload) },
+            error: { name, payload in recorder.record("error", name, payload) }
         )
 
         log.debug("search.initiated", ["query": "newport"])
         log.info("search.completed", ["count": "3"])
         log.error("search.failed", ["error": "boom"])
 
-        // Allow the dispatched recording Tasks to land.
-        let exp = expectation(description: "events recorded")
-        Task {
-            // Give other tasks a moment to run.
-            try? await Task.sleep(for: .milliseconds(50))
-            let events = await recorder.events
-            XCTAssertEqual(events.count, 3)
-            XCTAssertEqual(events.map(\.severity), ["debug", "info", "error"])
-            XCTAssertEqual(events.map(\.name), ["search.initiated", "search.completed", "search.failed"])
-            XCTAssertEqual(events[1].payload, ["count": "3"])
-            exp.fulfill()
-        }
-        wait(for: [exp], timeout: 1.0)
+        let events = recorder.events
+        XCTAssertEqual(events.count, 3)
+        XCTAssertEqual(events.map(\.severity), ["debug", "info", "error"])
+        XCTAssertEqual(events.map(\.name), ["search.initiated", "search.completed", "search.failed"])
+        XCTAssertEqual(events[1].payload, ["count": "3"])
     }
 
     func test_logEventOverload_dispatchesWithRawValue() {
-        actor Capture {
-            var lastName: String = ""
-            func set(_ name: String) { lastName = name }
-        }
-        let capture = Capture()
+        let recorder = SyncRecorder()
         let log = LogClient(
-            debug: { name, _ in Task { await capture.set(name) } },
-            info:  { name, _ in Task { await capture.set(name) } },
-            error: { name, _ in Task { await capture.set(name) } }
+            debug: { name, payload in recorder.record("debug", name, payload) },
+            info:  { name, payload in recorder.record("info",  name, payload) },
+            error: { name, payload in recorder.record("error", name, payload) }
         )
 
         log.info(.hotelsCompleted)
 
-        let exp = expectation(description: "captured")
-        Task {
-            try? await Task.sleep(for: .milliseconds(50))
-            let value = await capture.lastName
-            XCTAssertEqual(value, "hotels.completed")
-            exp.fulfill()
-        }
-        wait(for: [exp], timeout: 1.0)
+        XCTAssertEqual(recorder.events.count, 1)
+        XCTAssertEqual(recorder.events.first?.severity, "info")
+        XCTAssertEqual(recorder.events.first?.name, "hotels.completed")
+    }
+}
+
+// MARK: - Helpers
+
+private final class SyncRecorder: @unchecked Sendable {
+    struct Event {
+        let severity: String
+        let name: String
+        let payload: [String: String]
+    }
+    private let lock = NSLock()
+    private var _events: [Event] = []
+
+    func record(_ severity: String, _ name: String, _ payload: [String: String]) {
+        lock.lock(); defer { lock.unlock() }
+        _events.append(Event(severity: severity, name: name, payload: payload))
+    }
+
+    var events: [Event] {
+        lock.lock(); defer { lock.unlock() }
+        return _events
     }
 }
