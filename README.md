@@ -188,11 +188,10 @@ A few things the staging API does that affect the model layer:
 
 ## What I'd do differently with more time
 
-1. **Move Theme.Color into the Asset Catalog** so dark mode works correctly. ~1-2h.
-2. **Add a snapshot test suite** with swift-snapshot-testing covering all 5 states × both screens × portrait/landscape × light/dark. ~3-4h.
-3. **AccessibilitySnapshot** integration to catch label/trait regressions. ~1h.
-4. **Pull-to-refresh** + **pagination** on hotel listings via `refreshable {}` and offset bumping. ~2h.
-5. **Extract `.preview` fixture data into JSON files** under `Tests/Fixtures/JSON/` so production source files don't carry test data. ~30min.
-6. **Maestro matrix runs** across iPhone SE / 15 / 17 Pro Max + portrait/landscape + light/dark — currently only iPhone 17 Pro / portrait / light is exercised. ~1h to wire matrix configs.
-7. **Real `LogClient` testing strategy**: a `.recording` factory that buffers calls so unit tests can assert on logger emissions per Status transition. ~30min.
-8. **Pre-commit hooks** (SwiftFormat or SwiftLint) so the conventions documented here can't drift.
+1. **Add a snapshot test suite** with swift-snapshot-testing covering all 5 states × both screens × portrait/landscape × light/dark. ~3-4h.
+2. **AccessibilitySnapshot** integration to catch label/trait regressions. ~1h.
+3. **Pull-to-refresh** + **pagination** on hotel listings via `refreshable {}` and offset bumping. ~2h.
+4. **Extract `.preview` fixture data into JSON files** under `Tests/Fixtures/JSON/` so production source files don't carry test data. ~30min.
+5. **Maestro matrix runs** across iPhone SE / 15 / 17 Pro Max + portrait/landscape + light/dark — currently only iPhone 17 Pro / portrait / light is exercised. ~1h to wire matrix configs.
+6. **Real `LogClient` testing strategy**: a `.recording` factory that buffers calls so unit tests can assert on logger emissions per Status transition. ~30min.
+7. **Pre-commit hooks** (SwiftFormat or SwiftLint) so the conventions documented here can't drift.
