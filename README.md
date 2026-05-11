@@ -178,7 +178,7 @@ A few things the staging API does that affect the model layer:
 
 ## Known Limitations
 
-- **Dark mode**: ~~Theme.Color uses raw literals~~ — semantic tokens (`background`, `surface`, `textPrimary`, etc.) now live in `Assets.xcassets/Colors/` colorsets with light + dark appearance variants. `Theme.Color.*` reads `SwiftUI.Color("name", bundle: .main)` from those colorsets. Visual verification of dark rendering across both screens is still pending.
+- **Dark mode**: semantic tokens (`background`, `surface`, `textPrimary`, etc.) live in `Assets.xcassets/Colors/` colorsets with light + dark appearance variants. `Theme.Color.*` reads `SwiftUI.Color("name", bundle: .main)` from those colorsets. Visually verified across both screens via Maestro flows `33-dark-search-loaded.yaml` and `37-dark-hotels-loaded.yaml`.
 - **Pagination**: the autocomplete endpoint accepts `limit` + `offset` but the UI doesn't paginate. With 30 hotels per page from the algolia endpoint, infinite scroll would be a natural addition.
 - **Pull-to-refresh** on hotel listings.
 - **Offline behavior**: no caching of last-seen results. A network drop during browsing returns the user to a `.failed` state without a stale-data fallback.
