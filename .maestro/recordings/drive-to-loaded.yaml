@@ -1,0 +1,12 @@
+appId: com.resortpass.interview.ResortPass
+name: Drive to loaded state — captures done externally via simctl
+tags:
+  - recording
+---
+- launchApp
+- assertVisible: "Day Passes"
+- tapOn: "Search cities, hotels…"
+- inputText: "newport"
+- extendedWaitUntil:
+    visible: "Newport Beach, California"
+    timeout: 5000

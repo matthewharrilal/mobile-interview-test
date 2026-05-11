@@ -1,0 +1,11 @@
+appId: com.resortpass.interview.ResortPass
+name: Drive to hotels state (assumes app already at search-loaded with "Newport Beach, California" visible)
+tags:
+  - recording
+---
+- tapOn: "Newport Beach, California"
+- extendedWaitUntil:
+    visible: "30 hotels"
+    timeout: 8000
+- waitForAnimationToEnd:
+    timeout: 4000
