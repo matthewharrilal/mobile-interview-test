@@ -28,6 +28,8 @@ Pods/
 audit-*.png
 hero-*.png
 hotels-*.png
+# but DO commit the README hero banner PNGs in docs/media/
+!docs/media/hero-*.png
 
 # Multi-agent audit working files (scratch — not part of submission)
 team-audit/
