@@ -10,19 +10,36 @@ Two-screen iOS app for the ResortPass Founding iOS Engineer interview. Search a 
 
 ## Get it running
 
+**Requirements.** Xcode 15+ (for iOS 17 SDK and the `@Observable` macro). An iOS Simulator running iOS 17 or later. No other tooling needed — the `.xcodeproj` is committed alongside its `project.yml`, the Kingfisher package version is pinned via `Package.resolved`, and the custom Playfair Display fonts ship in the repo.
+
 ```bash
-git clone <fork-url>
-cd ResortPassApp
+git clone https://github.com/<your-fork>/mobile-interview-test.git
+cd mobile-interview-test
 open ResortPass.xcodeproj
 ```
 
-`Cmd+R` builds and runs. `Cmd+U` runs the test suite. iOS 17+ Simulator. The `.xcodeproj` is committed alongside its `project.yml`, so reviewers don't need XcodeGen.
+In Xcode: pick **iPhone 16 Pro / iOS 18** as the simulator (canonical target), then `Cmd+R` to build and run, `Cmd+U` to run the test suite. First build takes ~30 seconds longer while Xcode resolves Kingfisher; subsequent builds are cached.
+
+Or via the included `Makefile`, which pins the same simulator:
 
 ```bash
-make build    # iPhone 16 Pro / iOS 18
+make build    # xcodebuild for iPhone 16 Pro / iOS 18
 make test     # full unit suite (120 tests, ~20s)
-make clean
+make lint     # grep-gate on .animation(...) bindings
+make clean    # nuke DerivedData
 ```
+
+**Running Maestro flows locally** (optional — the 81 flows are CI-verified, but you can run them yourself):
+
+```bash
+brew install openjdk@17                                                  # Maestro requires Java
+curl -fsSL https://get.maestro.mobile.dev | bash                         # one-time install
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+maestro test .maestro/01-happy-path.yaml                                 # one flow
+maestro test .maestro/                                                   # the full 81
+```
+
+Maestro flows assume **iPhone 16 Pro / iOS 18** — they fail on iOS 26 due to a Maestro driver incompatibility (documented in §9).
 
 ---
 
