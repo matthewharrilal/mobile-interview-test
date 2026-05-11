@@ -515,12 +515,22 @@ private extension HotelListingsView {
                         // from identity rather than mid-scrollTransition scale,
                         // eliminating non-identity source frames during the
                         // 250ms morph window (cohesion-animation-system A+L fix).
-                        .scrollTransition(.animated, axis: .horizontal) { content, phase in
-                            let suppress = viewModel.state.presentation != .browsing
-                            return content
-                                .scaleEffect(suppress || phase.isIdentity ? 1.0 : 0.94, anchor: .center)
-                                .opacity(suppress || phase.isIdentity ? 1.0 : 0.7)
-                        }
+                        //
+                        // Capture `suppress` outside the closure: `scrollTransition`
+                        // takes a `@Sendable` closure, and reading the
+                        // @MainActor-isolated `viewModel.state.presentation`
+                        // inside it trips Swift 6 strict-concurrency checks.
+                        // SwiftUI re-renders this body when state changes, so the
+                        // closure always sees the current value via the captured
+                        // constant — no behavioral change.
+                        .scrollTransition(
+                            .animated, axis: .horizontal,
+                            transition: { [suppress = viewModel.state.presentation != .browsing] content, phase in
+                                content
+                                    .scaleEffect(suppress || phase.isIdentity ? 1.0 : 0.94, anchor: .center)
+                                    .opacity(suppress || phase.isIdentity ? 1.0 : 0.7)
+                            }
+                        )
                     }
                 }
                 .scrollTargetLayout()

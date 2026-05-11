@@ -26,7 +26,11 @@ enum Theme {
         /// Subtle border — only used where whitespace alone is insufficient.
         static let border = SwiftUI.Color("border", bundle: .main)
         /// Brand accent — links, primary buttons, focus ring.
-        static let accent = SwiftUI.Color("accent", bundle: .main)
+        /// Reads `Colors/accentBrand` from the asset catalog. The name is
+        /// `accentBrand` (not `accent`) to avoid colliding with the system
+        /// `AccentColor.colorset` Xcode auto-generates a `Color.accent`
+        /// symbol from at the project root.
+        static let accent = SwiftUI.Color("accentBrand", bundle: .main)
         /// Semantic status — destructive actions, errors.
         static let danger = SwiftUI.Color("danger", bundle: .main)
     }
