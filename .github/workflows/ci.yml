@@ -92,32 +92,15 @@ jobs:
       - name: Resolve simulator destination
         id: sim
         run: |
-          # Pick the newest available iOS 18.x sim matching $SIM_NAME, so we
-          # tolerate runner-image drift (18.0 / 18.1 / 18.2 / 18.5 / ...).
-          UDID=$(xcrun simctl list devices available --json | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          best = None
-          for runtime_key, devs in data.get('devices', {}).items():
-              if 'iOS-${SIM_OS_PREFIX}' not in runtime_key.replace('.', '-'):
-                  continue
-              for d in devs:
-                  if d.get('name') == '${SIM_NAME}' and d.get('isAvailable'):
-                      ver = runtime_key.split('SimRuntime.iOS-')[-1].replace('-', '.')
-                      if best is None or ver > best[0]:
-                          best = (ver, d['udid'])
-          if best is None:
-              sys.stderr.write('No iOS ${SIM_OS_PREFIX}.x sim named ${SIM_NAME} available\n')
-              sys.exit(1)
-          print(best[1])
-          ")
-          if [ -z "$UDID" ]; then
-            echo "::error::Could not resolve iOS ${SIM_OS_PREFIX}.x simulator for ${SIM_NAME}"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "Resolved $SIM_NAME (iOS ${SIM_OS_PREFIX}.x) → $UDID"
-          echo "destination=platform=iOS Simulator,id=$UDID" >> "$GITHUB_OUTPUT"
+          # Use OS=latest so xcodebuild picks whatever iOS the runner ships
+          # with (18.x today, future runner images may move to 18.5+/19.x).
+          # Avoids hardcoding a patch version that drifts between runner images.
+          echo "Available iOS sims on this runner:"
+          xcrun simctl list devices available | grep -i "iphone 16 pro" | head -5 || true
+          echo ""
+          echo "Available iOS runtimes:"
+          xcrun simctl list runtimes iOS | head -10
+          echo "destination=platform=iOS Simulator,name=${SIM_NAME},OS=latest" >> "$GITHUB_OUTPUT"
 
       - name: xcodebuild test
         run: |
