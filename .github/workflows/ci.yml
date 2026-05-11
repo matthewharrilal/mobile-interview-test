@@ -39,8 +39,11 @@ concurrency:
 
 env:
   SCHEME: ResortPass
+  # Sim is resolved dynamically per job (see "Resolve simulator destination" steps)
+  # to tolerate whatever iOS 18.x the runner ships with — Xcode 16 ships iOS 18.x
+  # but the exact patch version drifts between runner images.
   SIM_NAME: iPhone 16 Pro
-  SIM_OS: "18.0"
+  SIM_OS_PREFIX: "18"
   BUNDLE_ID: com.resortpass.interview.ResortPass
   DERIVED_DATA_PATH: ~/Library/Developer/Xcode/DerivedData
 
@@ -89,8 +92,32 @@ jobs:
       - name: Resolve simulator destination
         id: sim
         run: |
-          DEST="platform=iOS Simulator,name=${SIM_NAME},OS=${SIM_OS}"
-          echo "destination=$DEST" >> "$GITHUB_OUTPUT"
+          # Pick the newest available iOS 18.x sim matching $SIM_NAME, so we
+          # tolerate runner-image drift (18.0 / 18.1 / 18.2 / 18.5 / ...).
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          best = None
+          for runtime_key, devs in data.get('devices', {}).items():
+              if 'iOS-${SIM_OS_PREFIX}' not in runtime_key.replace('.', '-'):
+                  continue
+              for d in devs:
+                  if d.get('name') == '${SIM_NAME}' and d.get('isAvailable'):
+                      ver = runtime_key.split('SimRuntime.iOS-')[-1].replace('-', '.')
+                      if best is None or ver > best[0]:
+                          best = (ver, d['udid'])
+          if best is None:
+              sys.stderr.write('No iOS ${SIM_OS_PREFIX}.x sim named ${SIM_NAME} available\n')
+              sys.exit(1)
+          print(best[1])
+          ")
+          if [ -z "$UDID" ]; then
+            echo "::error::Could not resolve iOS ${SIM_OS_PREFIX}.x simulator for ${SIM_NAME}"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Resolved $SIM_NAME (iOS ${SIM_OS_PREFIX}.x) → $UDID"
+          echo "destination=platform=iOS Simulator,id=$UDID" >> "$GITHUB_OUTPUT"
 
       - name: xcodebuild test
         run: |
