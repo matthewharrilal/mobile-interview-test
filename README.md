@@ -98,7 +98,7 @@ The layer is typed end-to-end. Raw HTTP method strings, header names, content ty
 
 ## What earned an ADR
 
-Nine decisions warranted a written record. Full text in [`docs/ADRs.md`](docs/ADRs.md).
+Nine decisions warranted a written record — anything where a future contributor would otherwise ask "why this and not the other thing?" Full text lives in [`docs/ADRs.md`](docs/ADRs.md); below is the one-liner index.
 
 | | Decision | Why it earned an ADR |
 |---|---|---|
@@ -118,29 +118,39 @@ Nine decisions warranted a written record. Full text in [`docs/ADRs.md`](docs/AD
 
 ## What each surface owns
 
-### Search
+Three feature surfaces. Each gets a lead sentence, the notable design choice, an edge case worth flagging, and a test count.
 
-The first screen. An autocomplete search bar at the top, results list below, and three terminal states the user can land in — empty, failed, and a dedicated *null-coordinates* failure for places where the staging API doesn't have lat/lng (Brooklyn, Florida is the canonical example). The 500 ms debounce runs through an injected `ContinuousClock` so tests don't sleep for real wall-clock time. The failure-state CTA is "Search a nearby city" for the null-coord case rather than a generic "Try Again" loop that would re-pick the same offending place.
+### Search — *autocomplete with a real failure mode*
 
-A Maestro flow caught a real bug here: in landscape, the on-screen keyboard occluded the retry CTA in failed/empty states. Fixed via auto-dismiss of the keyboard on status change.
+**An autocomplete search bar with three terminal states.** Idle, loading, loaded, empty, failed — and a fourth dedicated *null-coordinates* failure for places where the staging API doesn't have lat/lng. Brooklyn, Florida is the canonical example.
 
-**Tests:** 11 reducer + 21 spec compliance + 6 direct live-client.
+The 500 ms debounce runs through an injected `ContinuousClock` so tests don't sleep for real wall-clock time. The failure-state CTA is "Search a nearby city" for the null-coord case rather than a generic "Try Again" loop that would re-pick the same offending place.
 
-### Hotel listings
+> **Maestro caught a real bug here.** In landscape, the on-screen keyboard occluded the retry CTA in failed/empty states. Fixed via auto-dismiss of the keyboard on status change.
 
-The second screen. Above the fold: a parallax stretchy hero, a filter chip row, then sectioned horizontal carousels — `Top picks` (≤5 by rating), `Within walking distance` (≤1.5 mi), `Best value` (cheapest 5), and an `All` fallback. The section pipeline is a pure builder cached on the loaded state; it rebuilds only when hotels or active filter mutate, never per render.
+<sub>**Tests** — 11 reducer · 21 spec compliance · 6 direct live-client</sub>
 
-Filters cover All / Pool / Spa / Adults / Pets / Wellness — string-match heuristics against the hotel's product name and primary vibe (the API doesn't expose canonical filter categories). Cache warming runs in two windows: the first 30 cards on `.loaded`, the next four detail-carousel images on card tap.
+### Hotel listings — *sectioned carousels, not the spec's vertical list*
 
-The deviation from the spec's "vertical list" suggestion lives in [ADR-009](docs/ADRs.md) — full reasoning below in **§12**.
+**Above the fold: a parallax stretchy hero, a filter chip row, then sectioned horizontal carousels.** `Top picks` (≤5 by rating) · `Within walking distance` (≤1.5 mi) · `Best value` (cheapest 5) · `All` fallback.
 
-**Tests:** 5 reducer + 11 section-pipeline + 9 direct live-client.
+The section pipeline is a pure builder cached on the loaded state — it rebuilds only when hotels or active filter mutate, never per render. Filters cover All / Pool / Spa / Adults / Pets / Wellness via string-match heuristics against the hotel's product name and primary vibe; the API doesn't expose canonical filter categories.
 
-### Hotel detail
+Cache warming runs in two windows: the first 30 cards on `.loaded`, the next four detail-carousel images on card tap.
 
-A pushed-mode scene that morphs in from the tapped card. iOS 18 path uses matched-transition-source + the system zoom navigation transition; iOS 17 falls back to `matchedGeometryEffect` and a `ZStack` overlay. Both paths compile against the iOS 17 SDK.
+> **Why this and not a vertical list.** Hospitality search is image-led. Full reasoning in **§12** + [ADR-009](docs/ADRs.md).
 
-The sticky header parallaxes on pull-down (damped scale). Dismiss is a drag-throw with rubber-band response, integrated via `CADisplayLink` to run at the native display refresh — 120 Hz on ProMotion. The image carousel inside uses a peek + mid-snap layout; its caching processor matches the upstream Kingfisher prefetch identifier so the morph never decodes on demand.
+<sub>**Tests** — 5 reducer · 11 section-pipeline · 9 direct live-client</sub>
+
+### Hotel detail — *the signature animation surface*
+
+**A pushed-mode scene that morphs in from the tapped card.** iOS 18 path uses matched-transition-source + the system zoom navigation transition. iOS 17 falls back to `matchedGeometryEffect` + a `ZStack` overlay. Both paths compile against the iOS 17 SDK via an `@available`-gated modifier.
+
+The sticky header parallaxes on pull-down with a damped scale. Dismiss is a drag-throw with rubber-band response, integrated via `CADisplayLink` to run at the native display refresh — 120 Hz on ProMotion.
+
+The image carousel inside uses a peek + mid-snap layout; its caching processor identifier matches the upstream Kingfisher prefetch so the morph never decodes on demand.
+
+<sub>**Pinned by Maestro flows** — `14-card-detail-morph-spring-envelope`, `15-swipe-down-dismiss-rubber-band`, `20-hero-stretch-pulldown`, `21-content-fade-in-detail`</sub>
 
 ---
 
@@ -161,6 +171,8 @@ Things the staging API does that shaped the model layer:
 <sub>08 · CHOICES</sub>
 
 ## Technical choices
+
+A flat matrix of the decisions you'd otherwise have to dig through code to reconstruct. Each row links its rationale into an ADR where there's depth worth defending.
 
 | Concern | Choice | Why |
 |---|---|---|
@@ -257,9 +269,17 @@ xcresult bundles and Maestro screenshots upload as workflow artifacts on failure
 
 ## Accessibility posture
 
-VoiceOver labels on every interactive element. Hotel cards combine via `.accessibilityElement(children: .combine)` so the rotor reads each card as a single element. Section headers carry the `.isHeader` trait. Dynamic Type respected through `xxLarge` and into accessibility sizes via semantic font styles. Empty + failed states use `ContentUnavailableView` (iOS 17 native, built-in traits). Light/dark mode resolves through Asset Catalog semantic colorsets with both appearance variants. Pinned by dedicated Maestro flows for VoiceOver, AX5, Reduce Motion, Bold Text, and Increase Contrast.
+**What's in.** VoiceOver labels on every interactive element. Five concrete moves:
 
-**Honest limitations:** no `AccessibilitySnapshot` integration for label/trait regression catching (deferred); no automated VoiceOver navigation-order tests beyond the Maestro coverage; dark theme contrast not formally WCAG-audited; filter chip and clear-search tap areas are on the HIG 44 pt boundary — flagged for an explicit audit pass.
+- Hotel cards combine via `.accessibilityElement(children: .combine)` so the rotor reads each card as a single element.
+- Section headers carry the `.isHeader` trait so VoiceOver users can rotor-skim section by section.
+- Dynamic Type respected through `xxLarge` and into accessibility sizes via semantic font styles.
+- Empty + failed states use `ContentUnavailableView` — iOS 17 native, built-in traits.
+- Light/dark mode resolves through Asset Catalog semantic colorsets with both appearance variants.
+
+Pinned end-to-end by dedicated Maestro flows for VoiceOver navigation, AX5 layout, Reduce Motion, Bold Text, and Increase Contrast.
+
+**What's honestly missing.** No `AccessibilitySnapshot` integration for label/trait regression catching (deferred to §14). No automated VoiceOver navigation-order tests beyond the Maestro coverage. Dark theme contrast not formally WCAG-audited. Filter chip and clear-search tap areas sit on the HIG 44 pt boundary — flagged for an explicit audit pass.
 
 ---
 
